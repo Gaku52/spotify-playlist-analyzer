@@ -114,8 +114,13 @@ This project is configured for deployment on Vercel:
 
 1. Push your code to GitHub
 2. Import the project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
+3. Add environment variables in Vercel dashboard:
+   - `SPOTIFY_CLIENT_ID`
+   - `SPOTIFY_CLIENT_SECRET`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL` (use your production URL)
+4. Update Spotify redirect URI to include your production URL
+5. Deploy
 
 **Live URL**: [https://music.ogadix.com](https://music.ogadix.com)
 
