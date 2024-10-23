@@ -41,9 +41,9 @@ cd spotify-playlist-analyzer
 npm install
 ```
 
-3. Create a `.env.local` file:
+3. Create a `.env.local` file in the project root:
 ```bash
-cp .env.local.example .env.local
+touch .env.local
 ```
 
 4. Add your Spotify credentials to `.env.local`:
@@ -51,13 +51,20 @@ cp .env.local.example .env.local
    - Create a new app
    - Copy Client ID and Client Secret
    - Add redirect URI: `http://localhost:3000/api/auth/callback/spotify`
+   - Add the following to your `.env.local` file:
+   ```bash
+   SPOTIFY_CLIENT_ID=your_client_id_here
+   SPOTIFY_CLIENT_SECRET=your_client_secret_here
+   NEXTAUTH_SECRET=your_nextauth_secret_here
+   NEXTAUTH_URL=http://localhost:3000
+   ```
 
 5. Run the development server:
 ```bash
 npm run dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000)
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Documentation
 
@@ -75,7 +82,12 @@ npm run dev
 
 ## Environment Variables
 
-See `.env.local.example` for required environment variables.
+Required environment variables for the application:
+
+- `SPOTIFY_CLIENT_ID` - Your Spotify application client ID
+- `SPOTIFY_CLIENT_SECRET` - Your Spotify application client secret
+- `NEXTAUTH_SECRET` - Secret for NextAuth.js (generate with `openssl rand -base64 32`)
+- `NEXTAUTH_URL` - Your application URL (e.g., `http://localhost:3000` for development)
 
 ## Project Structure
 

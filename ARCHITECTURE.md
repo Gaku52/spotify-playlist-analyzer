@@ -1002,5 +1002,5 @@ export function TrackList({ tracks }: { tracks: TrackWithFeatures[] }) {
 
 ---
 
-**最終更新:** 2025-10-22
+**最終更新:** 2024-10-22
 **バージョン:** 1.0
