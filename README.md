@@ -59,6 +59,20 @@ npm run dev
 
 6. Open [http://localhost:3000](http://localhost:3000)
 
+## Documentation
+
+### 📚 Technical Specifications (日本語 / Japanese)
+
+- **[アーキテクチャ & データフロー](./ARCHITECTURE.md)** - システム設計、API仕様、状態管理
+- **[エラーハンドリング](./ERROR_HANDLING_en.md)** - エラー処理、ローディング状態 (English)
+- **[パフォーマンス最適化](./PERFORMANCE_en.md)** - パフォーマンス戦略、最適化手法 (English)
+
+### 🌐 English Documentation (Backup)
+
+- [Architecture (English)](./ARCHITECTURE_en.md)
+- [Error Handling (English)](./ERROR_HANDLING_en.md)
+- [Performance (English)](./PERFORMANCE_en.md)
+
 ## Environment Variables
 
 See `.env.local.example` for required environment variables.

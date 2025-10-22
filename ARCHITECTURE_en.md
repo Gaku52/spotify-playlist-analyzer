@@ -1,41 +1,41 @@
-# アーキテクチャ & データフロー
+# Architecture & Data Flow
 
-## 概要
+## Overview
 
-このドキュメントは、Spotify Playlist Analyzerアプリケーションの完全なアーキテクチャとデータフローを説明します。
-
----
-
-## 目次
-
-1. [システムアーキテクチャ](#システムアーキテクチャ)
-2. [データフロー図](#データフロー図)
-3. [状態管理](#状態管理)
-4. [APIエンドポイント](#apiエンドポイント)
-5. [キャッシュ戦略](#キャッシュ戦略)
-6. [型定義](#型定義)
+This document describes the complete architecture and data flow of the Spotify Playlist Analyzer application.
 
 ---
 
-## システムアーキテクチャ
+## Table of Contents
+
+1. [System Architecture](#system-architecture)
+2. [Data Flow Diagrams](#data-flow-diagrams)
+3. [State Management](#state-management)
+4. [API Endpoints](#api-endpoints)
+5. [Caching Strategy](#caching-strategy)
+6. [Type Definitions](#type-definitions)
+
+---
+
+## System Architecture
 
 ```mermaid
 graph TB
-    User[ユーザーブラウザ]
+    User[User Browser]
     NextApp[Next.js App]
     SpotifyAPI[Spotify Web API]
     LocalStorage[LocalStorage]
 
-    User -->|HTTPリクエスト| NextApp
+    User -->|HTTP Request| NextApp
     NextApp -->|OAuth| SpotifyAPI
     NextApp -->|REST API| SpotifyAPI
-    NextApp -->|キャッシュ| LocalStorage
+    NextApp -->|Cache| LocalStorage
 
     subgraph "Next.js App"
-        Pages[ページ/ルート]
-        Components[コンポーネント]
+        Pages[Pages/Routes]
+        Components[Components]
         Context[Context API]
-        APIRoutes[APIルート]
+        APIRoutes[API Routes]
 
         Pages --> Components
         Components --> Context
@@ -46,200 +46,200 @@ graph TB
 
 ---
 
-## データフロー図
+## Data Flow Diagrams
 
-### 1. 認証フロー
+### 1. Authentication Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as ユーザー
-    participant Browser as ブラウザ
+    participant User
+    participant Browser
     participant NextAuth
-    participant SpotifyAPI as Spotify API
+    participant SpotifyAPI
 
-    User->>Browser: "Spotifyでログイン"をクリック
+    User->>Browser: Click "Login with Spotify"
     Browser->>NextAuth: /api/auth/signin
-    NextAuth->>SpotifyAPI: OAuthリクエスト
-    SpotifyAPI->>User: 認証ページ
-    User->>SpotifyAPI: 承認
-    SpotifyAPI->>NextAuth: 認証コード
-    NextAuth->>SpotifyAPI: アクセストークンと交換
-    SpotifyAPI->>NextAuth: アクセストークン + リフレッシュトークン
-    NextAuth->>Browser: セッションCookieをセット
+    NextAuth->>SpotifyAPI: OAuth Request
+    SpotifyAPI->>User: Authorization Page
+    User->>SpotifyAPI: Approve
+    SpotifyAPI->>NextAuth: Authorization Code
+    NextAuth->>SpotifyAPI: Exchange for Access Token
+    SpotifyAPI->>NextAuth: Access Token + Refresh Token
+    NextAuth->>Browser: Set Session Cookie
     Browser->>NextAuth: GET /api/spotify/me
     NextAuth->>SpotifyAPI: GET /v1/me
-    SpotifyAPI->>NextAuth: ユーザー情報 (product: free/premium)
-    NextAuth->>Browser: ユーザーデータ + isPremiumフラグ
-    Browser->>Browser: /dashboardへリダイレクト
+    SpotifyAPI->>NextAuth: User Info (product: free/premium)
+    NextAuth->>Browser: User Data + isPremium flag
+    Browser->>Browser: Redirect to /dashboard
 ```
 
 ---
 
-### 2. ダッシュボードのデータフロー
+### 2. Dashboard Data Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as ユーザー
-    participant Page as ページ
+    participant User
+    participant Page
     participant Context
     participant API
     participant Spotify
-    participant Cache as キャッシュ
+    participant Cache
 
-    User->>Page: /dashboardを訪問
+    User->>Page: Visit /dashboard
     Page->>Context: useUser()
-    Context->>Page: ユーザーデータ + isPremium
+    Context->>Page: User data + isPremium
 
-    Page->>Cache: キャッシュされたプレイリストを確認
+    Page->>Cache: Check cached playlists
 
-    alt キャッシュが存在 & 有効
-        Cache->>Page: キャッシュデータを返す
-    else キャッシュミス or 期限切れ
+    alt Cache exists & valid
+        Cache->>Page: Return cached data
+    else Cache miss or expired
         Page->>API: GET /api/spotify/playlists
         API->>Spotify: GET /v1/me/playlists
-        Spotify->>API: プレイリストデータ
-        API->>Page: プレイリスト配列
-        Page->>Cache: プレイリストを保存 (TTL: 5分)
+        Spotify->>API: Playlists data
+        API->>Page: Playlists array
+        Page->>Cache: Store playlists (5min TTL)
     end
 
-    Page->>User: プレイリストグリッドを表示
+    Page->>User: Display playlist grid
 ```
 
 ---
 
-### 3. プレイリスト分析フロー
+### 3. Playlist Analysis Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as ユーザー
-    participant Page as ページ
+    participant User
+    participant Page
     participant API
     participant Spotify
-    participant Cache as キャッシュ
+    participant Cache
 
-    User->>Page: プレイリストをクリック
-    Page->>Page: /playlist/[id]へ遷移
+    User->>Page: Click playlist
+    Page->>Page: Navigate to /playlist/[id]
 
-    Note over Page,Spotify: ステップ1: プレイリスト詳細取得
+    Note over Page,Spotify: Step 1: Get Playlist Details
     Page->>API: GET /api/spotify/playlist/[id]
     API->>Spotify: GET /v1/playlists/[id]
-    Spotify->>API: プレイリスト + トラック (100件)
+    Spotify->>API: Playlist + Tracks (100 items)
 
-    Note over Page,Spotify: ステップ2: オーディオ特徴取得
-    API->>API: トラックIDを抽出 (100件ずつ)
+    Note over Page,Spotify: Step 2: Get Audio Features
+    API->>API: Extract track IDs (batch of 100)
     API->>Spotify: GET /v1/audio-features?ids=...
-    Spotify->>API: オーディオ特徴の配列
+    Spotify->>API: Audio features array
 
-    Note over API: ステップ3: データをマージ
-    API->>API: トラック + オーディオ特徴をマージ
-    API->>Page: 完全なトラックデータ
+    Note over API: Step 3: Merge Data
+    API->>API: Merge tracks + audio features
+    API->>Page: Complete track data
 
-    Page->>Cache: トラックIDをキーとして保存
-    Page->>User: 分析テーブルを表示
+    Page->>Cache: Store with track IDs as keys
+    Page->>User: Display analysis table
 
-    Note over User,Page: ステップ4: 100曲以上の場合
-    alt プレイリストが100曲超
+    Note over User,Page: Step 4: More tracks if > 100
+    alt Playlist has > 100 tracks
         Page->>API: GET /api/spotify/playlist/[id]?offset=100
-        API->>Spotify: 次の100曲
-        Spotify->>API: 追加トラック
-        API->>Page: 既存データに追加
+        API->>Spotify: Next 100 tracks
+        Spotify->>API: More tracks
+        API->>Page: Append to existing data
     end
 ```
 
 ---
 
-### 4. フィルター & プレイリスト作成フロー
+### 4. Filter & Create Playlist Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as ユーザー
-    participant FilterPanel as フィルターパネル
-    participant TrackList as トラックリスト
+    participant User
+    participant FilterPanel
+    participant TrackList
     participant API
     participant Spotify
 
-    User->>FilterPanel: BPM範囲を設定 (125-130)
-    FilterPanel->>TrackList: トラックをローカルでフィルター
-    TrackList->>User: 15件の一致するトラックを表示
+    User->>FilterPanel: Set BPM range (125-130)
+    FilterPanel->>TrackList: Filter tracks locally
+    TrackList->>User: Show 15 matching tracks
 
-    User->>FilterPanel: "プレイリスト作成"をクリック
-    FilterPanel->>FilterPanel: モーダルを開く
-    User->>FilterPanel: 名前を入力 "Tech House 125-130"
+    User->>FilterPanel: Click "Create Playlist"
+    FilterPanel->>FilterPanel: Open modal
+    User->>FilterPanel: Enter name "Tech House 125-130"
     FilterPanel->>API: POST /api/spotify/create-playlist
 
-    Note over API,Spotify: ステップ1: プレイリスト作成
+    Note over API,Spotify: Step 1: Create Playlist
     API->>Spotify: POST /v1/users/[user_id]/playlists
-    Spotify->>API: 新しいプレイリストID
+    Spotify->>API: New playlist ID
 
-    Note over API,Spotify: ステップ2: トラック追加
-    API->>API: トラックURIをバッチ化 (100件/リクエスト)
+    Note over API,Spotify: Step 2: Add Tracks
+    API->>API: Batch track URIs (100 per request)
     API->>Spotify: POST /v1/playlists/[id]/tracks
-    Spotify->>API: スナップショットID
+    Spotify->>API: Snapshot ID
 
-    API->>FilterPanel: 成功 + プレイリストURL
-    FilterPanel->>User: 成功トーストを表示
-    FilterPanel->>User: "Spotifyで開く"ボタン
+    API->>FilterPanel: Success + playlist URL
+    FilterPanel->>User: Show success toast
+    FilterPanel->>User: "Open in Spotify" button
 ```
 
 ---
 
-### 5. 再生フロー (Free vs Premium)
+### 5. Playback Flow (Free vs Premium)
 
 ```mermaid
 flowchart TD
-    A[ユーザーが再生をクリック] --> B{isPremiumをチェック}
+    A[User clicks play] --> B{Check isPremium}
 
-    B -->|Free| C[preview_urlを使用]
-    C --> D[30秒プレビューを再生]
-    D --> E["Spotifyで開く"ボタンを表示]
+    B -->|Free| C[Use preview_url]
+    C --> D[Play 30-second preview]
+    D --> E[Show 'Open in Spotify' button]
 
-    B -->|Premium| F{Web Playback SDK準備OK?}
-    F -->|No| G[SDKを初期化]
-    G --> H[デバイスを登録]
-    H --> I[再生を転送]
-    I --> J[フルトラックを再生]
+    B -->|Premium| F{Web Playback SDK ready?}
+    F -->|No| G[Initialize SDK]
+    G --> H[Register device]
+    H --> I[Transfer playback]
+    I --> J[Play full track]
 
     F -->|Yes| J
-    J --> K[フル再生コントロールを表示]
-    K --> L[画面下部にミニプレイヤー]
+    J --> K[Show full playback controls]
+    K --> L[Mini player at bottom]
 ```
 
 ---
 
-## 状態管理
+## State Management
 
-### グローバルステート (Context API)
+### Global State (Context API)
 
 ```typescript
 // lib/contexts/AppContext.tsx
 
 interface AppContextType {
-  // ユーザー
+  // User
   user: SpotifyUser | null;
   isPremium: boolean;
 
-  // プレイリスト
+  // Playlists
   playlists: Playlist[];
   currentPlaylist: PlaylistWithTracks | null;
 
-  // トラック & 分析
+  // Tracks & Analysis
   tracks: TrackWithFeatures[];
   filteredTracks: TrackWithFeatures[];
 
-  // フィルター
+  // Filters
   activeFilters: Filters | null;
   savedPresets: FilterPreset[];
 
-  // 再生
+  // Playback
   currentTrack: Track | null;
   isPlaying: boolean;
   playbackType: 'preview' | 'full' | null;
 
-  // UI状態
+  // UI State
   isLoading: boolean;
   error: AppError | null;
 
-  // アクション
+  // Actions
   setUser: (user: SpotifyUser) => void;
   setPlaylists: (playlists: Playlist[]) => void;
   setCurrentPlaylist: (playlist: PlaylistWithTracks) => void;
@@ -250,10 +250,10 @@ interface AppContextType {
 }
 ```
 
-### コンポーネントレベルの状態
+### Component-Level State
 
 ```typescript
-// 共有不要なUI固有の状態のみ
+// Only for UI-specific state that doesn't need to be shared
 
 // Dashboard.tsx
 const [searchQuery, setSearchQuery] = useState('');
@@ -269,35 +269,35 @@ const [isHovered, setIsHovered] = useState(false);
 
 ---
 
-## APIエンドポイント
+## API Endpoints
 
-### 認証
+### Authentication
 
 #### `POST /api/auth/signin`
-SpotifyのOAuth用NextAuthエンドポイント。
+Next Auth endpoint for Spotify OAuth.
 
 #### `POST /api/auth/callback/spotify`
-OAuthコールバックハンドラー。
+OAuth callback handler.
 
 #### `GET /api/auth/session`
-現在のセッションを取得。
+Get current session.
 
 ---
 
-### Spotify APIプロキシ
+### Spotify API Proxy
 
-すべてのエンドポイントは認証が必要。トークンは自動的にセッションから含まれます。
+All endpoints require authentication. Token is automatically included from session.
 
 #### `GET /api/spotify/me`
-現在のユーザー情報を取得。
+Get current user information.
 
-**レスポンス:**
+**Response:**
 ```typescript
 {
   id: string;
   display_name: string;
   email: string;
-  product: 'free' | 'premium';  // Premium判定のキー
+  product: 'free' | 'premium';  // Key for Premium detection
   images: { url: string }[];
 }
 ```
@@ -305,13 +305,13 @@ OAuthコールバックハンドラー。
 ---
 
 #### `GET /api/spotify/playlists`
-ユーザーのプレイリストを取得。
+Get user's playlists.
 
-**クエリパラメータ:**
-- `limit`: number (デフォルト: 50, 最大: 50)
-- `offset`: number (デフォルト: 0)
+**Query Parameters:**
+- `limit`: number (default: 50, max: 50)
+- `offset`: number (default: 0)
 
-**レスポンス:**
+**Response:**
 ```typescript
 {
   items: Playlist[];
@@ -320,18 +320,18 @@ OAuthコールバックハンドラー。
 }
 ```
 
-**キャッシュ:** 5分
+**Caching:** 5 minutes
 
 ---
 
 #### `GET /api/spotify/playlist/:id`
-トラック付きのプレイリスト詳細を取得。
+Get playlist details with tracks.
 
-**クエリパラメータ:**
-- `offset`: number (デフォルト: 0) - ページネーション用
-- `limit`: number (デフォルト: 100, 最大: 100)
+**Query Parameters:**
+- `offset`: number (default: 0) - for pagination
+- `limit`: number (default: 100, max: 100)
 
-**レスポンス:**
+**Response:**
 ```typescript
 {
   id: string;
@@ -345,17 +345,17 @@ OAuthコールバックハンドラー。
 }
 ```
 
-**注意:** このエンドポイントはすべてのトラックのオーディオ特徴を自動的に取得します。
+**Note:** This endpoint automatically fetches audio features for all tracks.
 
 ---
 
 #### `GET /api/spotify/audio-features`
-複数トラックのオーディオ特徴を取得。
+Get audio features for multiple tracks.
 
-**クエリパラメータ:**
-- `ids`: string (カンマ区切りのトラックID、最大100)
+**Query Parameters:**
+- `ids`: string (comma-separated track IDs, max 100)
 
-**レスポンス:**
+**Response:**
 ```typescript
 {
   audio_features: AudioFeatures[];
@@ -378,85 +378,85 @@ interface AudioFeatures {
 }
 ```
 
-**キャッシュ:** 永続 (オーディオ特徴は変更されない)
+**Caching:** Permanent (audio features don't change)
 
 ---
 
 #### `POST /api/spotify/create-playlist`
-新しいプレイリストを作成してトラックを追加。
+Create a new playlist and add tracks.
 
-**リクエストボディ:**
+**Request Body:**
 ```typescript
 {
   name: string;
   description?: string;
   public: boolean;
-  trackUris: string[];  // spotify:track:xxx 形式
+  trackUris: string[];  // spotify:track:xxx format
 }
 ```
 
-**レスポンス:**
+**Response:**
 ```typescript
 {
   id: string;
   name: string;
   external_urls: {
-    spotify: string;  // Spotifyで開くURL
+    spotify: string;  // URL to open in Spotify
   };
   snapshot_id: string;
 }
 ```
 
-**処理:**
-1. `POST /v1/users/{user_id}/playlists` でプレイリスト作成
-2. `POST /v1/playlists/{id}/tracks` で100件ずつトラック追加
+**Process:**
+1. Create playlist via `POST /v1/users/{user_id}/playlists`
+2. Add tracks in batches of 100 via `POST /v1/playlists/{id}/tracks`
 
 ---
 
-## キャッシュ戦略
+## Caching Strategy
 
-### 3層キャッシュ
+### Three-Tier Caching
 
 ```mermaid
 graph LR
-    A[リクエスト] --> B{メモリキャッシュ?}
-    B -->|ヒット| C[Reactステートから返す]
-    B -->|ミス| D{LocalStorage?}
-    D -->|ヒット & 有効| E[LocalStorageから返す]
-    D -->|ミス| F[APIから取得]
-    F --> G[メモリ + LocalStorageに保存]
-    G --> H[ユーザーに返す]
-    E --> I[メモリキャッシュを更新]
+    A[Request] --> B{Memory Cache?}
+    B -->|Hit| C[Return from React State]
+    B -->|Miss| D{LocalStorage?}
+    D -->|Hit & Valid| E[Return from LocalStorage]
+    D -->|Miss| F[Fetch from API]
+    F --> G[Store in Memory + LocalStorage]
+    G --> H[Return to User]
+    E --> I[Update Memory Cache]
     I --> H
 ```
 
-### 第1層: メモリキャッシュ (Reactステート)
+### Tier 1: Memory Cache (React State)
 
-**保存先:** Context API / コンポーネントステート
-**有効期限:** ページリフレッシュまたは遷移まで
-**用途:** 現在アクティブなデータ
+**Storage:** Context API / Component State
+**Lifetime:** Until page refresh or navigation
+**Use Case:** Currently active data
 
 ```typescript
-// AppContextに保存
+// Stored in AppContext
 {
-  playlists: Playlist[];           // すべてのプレイリスト
-  currentPlaylist: PlaylistDetail; // アクティブなプレイリスト
-  tracks: TrackWithFeatures[];     // 現在のトラック + 特徴
+  playlists: Playlist[];           // All playlists
+  currentPlaylist: PlaylistDetail; // Active playlist
+  tracks: TrackWithFeatures[];     // Current tracks + features
 }
 ```
 
 ---
 
-### 第2層: LocalStorage
+### Tier 2: LocalStorage
 
-**保存先:** ブラウザのLocalStorage
-**有効期限:** TTL付きで永続
-**用途:** ユーザー設定、最近のデータ
+**Storage:** Browser LocalStorage
+**Lifetime:** Persistent with TTL
+**Use Case:** User preferences, recent data
 
 ```typescript
-// localStorageのキー
+// localStorage keys
 interface LocalStorageSchema {
-  'app_version': string;  // マイグレーション用
+  'app_version': string;  // For migration
   'user_prefs': {
     theme: 'dark' | 'light';
     sortBy: string;
@@ -470,19 +470,19 @@ interface LocalStorageSchema {
   'cache_playlists': {
     data: Playlist[];
     timestamp: number;
-    ttl: number;  // 5分
+    ttl: number;  // 5 minutes
   };
   'cache_audio_features': {
     [trackId: string]: {
       data: AudioFeatures;
       timestamp: number;
-      // TTLなし - 永続キャッシュ
+      // No TTL - permanent cache
     };
   };
 }
 ```
 
-**ヘルパー関数:**
+**Helper Functions:**
 ```typescript
 // lib/cache.ts
 
@@ -502,7 +502,7 @@ export const cache = {
 
     const { data, timestamp, ttl } = JSON.parse(item);
 
-    // 有効期限チェック
+    // Check expiration
     if (ttl && Date.now() - timestamp > ttl) {
       localStorage.removeItem(key);
       return null;
@@ -523,14 +523,14 @@ export const cache = {
 
 ---
 
-### 第3層: サーバーサイドキャッシュ (将来 - Supabase)
+### Tier 3: Server-Side Cache (Future - Supabase)
 
-**保存先:** Supabaseデータベース
-**有効期限:** 永続
-**用途:** クロスデバイス同期、分析
+**Storage:** Supabase Database
+**Lifetime:** Persistent
+**Use Case:** Cross-device sync, analytics
 
 ```sql
--- 将来のスキーマ
+-- Future schema
 CREATE TABLE user_playlists (
   id UUID PRIMARY KEY,
   user_id VARCHAR NOT NULL,
@@ -552,22 +552,22 @@ CREATE TABLE user_presets (
 
 ---
 
-### キャッシュ無効化ルール
+### Cache Invalidation Rules
 
-| データタイプ | TTL | 無効化トリガー |
-|------------|-----|--------------|
-| ユーザー情報 | セッション | ログアウト |
-| プレイリスト一覧 | 5分 | 手動更新 |
-| プレイリスト詳細 | 10分 | 手動更新 |
-| オーディオ特徴 | 永続 | なし (不変) |
-| ユーザープリセット | 永続 | ユーザー削除 |
-| 最近のプレイリスト | 30日 | 経過時間 |
+| Data Type | TTL | Invalidation Trigger |
+|-----------|-----|---------------------|
+| User info | Session | Logout |
+| Playlists list | 5 minutes | Manual refresh |
+| Playlist details | 10 minutes | Manual refresh |
+| Audio features | Permanent | Never (immutable) |
+| User presets | Permanent | User deletion |
+| Recent playlists | 30 days | Age |
 
 ---
 
-## 型定義
+## Type Definitions
 
-### コア型
+### Core Types
 
 ```typescript
 // types/spotify.ts
@@ -633,7 +633,7 @@ export interface Track {
   album: Album;
   duration_ms: number;
   explicit: boolean;
-  preview_url: string | null;  // 30秒プレビュー
+  preview_url: string | null;  // 30-second preview
   uri: string;                 // spotify:track:xxx
   external_urls: {
     spotify: string;
@@ -664,7 +664,7 @@ export interface AudioFeatures {
   time_signature: number;     // 3, 4, 5, etc.
   energy: number;             // 0-1
   danceability: number;       // 0-1
-  valence: number;            // 0-1 (幸福度)
+  valence: number;            // 0-1 (happiness)
   acousticness: number;       // 0-1
   instrumentalness: number;   // 0-1
   liveness: number;           // 0-1
@@ -681,7 +681,7 @@ export interface TrackWithFeatures {
 
 ---
 
-### フィルター型
+### Filter Types
 
 ```typescript
 // types/filters.ts
@@ -703,7 +703,7 @@ export interface FilterPreset {
   usageCount: number;
 }
 
-// 事前定義プリセット
+// Predefined presets
 export const DEFAULT_PRESETS: FilterPreset[] = [
   {
     id: 'tech-house',
@@ -746,7 +746,7 @@ export const DEFAULT_PRESETS: FilterPreset[] = [
 
 ---
 
-### 再生型
+### Playback Types
 
 ```typescript
 // types/playback.ts
@@ -755,23 +755,23 @@ export interface PlaybackState {
   currentTrack: Track | null;
   isPlaying: boolean;
   isPaused: boolean;
-  position: number;        // ミリ秒
-  duration: number;        // ミリ秒
+  position: number;        // milliseconds
+  duration: number;        // milliseconds
   volume: number;          // 0-1
   playbackType: 'preview' | 'full';
-  deviceId: string | null; // Web Playback SDKデバイス
+  deviceId: string | null; // Web Playback SDK device
 }
 
 export interface PlaybackCapability {
-  canPlayPreview: boolean;  // 常にtrue
-  canPlayFull: boolean;     // Premiumのみ
-  sdkReady: boolean;        // Web Playback SDK初期化済み
+  canPlayPreview: boolean;  // Always true
+  canPlayFull: boolean;     // Premium only
+  sdkReady: boolean;        // Web Playback SDK initialized
 }
 ```
 
 ---
 
-### エラー型
+### Error Types
 
 ```typescript
 // types/errors.ts
@@ -784,22 +784,22 @@ export interface AppError {
 }
 
 export enum ErrorCode {
-  // 認証エラー
+  // Auth errors
   AUTH_FAILED = 'AUTH_FAILED',
   TOKEN_EXPIRED = 'TOKEN_EXPIRED',
   SESSION_INVALID = 'SESSION_INVALID',
 
-  // APIエラー
+  // API errors
   API_ERROR = 'API_ERROR',
   RATE_LIMIT = 'RATE_LIMIT',
   NETWORK_ERROR = 'NETWORK_ERROR',
 
-  // Spotifyエラー
+  // Spotify errors
   PREMIUM_REQUIRED = 'PREMIUM_REQUIRED',
   PLAYBACK_ERROR = 'PLAYBACK_ERROR',
   PLAYLIST_NOT_FOUND = 'PLAYLIST_NOT_FOUND',
 
-  // クライアントエラー
+  // Client errors
   INVALID_FILTERS = 'INVALID_FILTERS',
   CACHE_ERROR = 'CACHE_ERROR',
 }
@@ -807,9 +807,9 @@ export enum ErrorCode {
 
 ---
 
-## データ処理パターン
+## Data Processing Patterns
 
-### 1. 大規模プレイリストのバッチ処理
+### 1. Batch Processing for Large Playlists
 
 ```typescript
 // lib/spotify-utils.ts
@@ -822,7 +822,7 @@ export async function fetchAllTracksWithFeatures(
   let offset = 0;
   const limit = 100;
 
-  // ステップ1: すべてのトラックを取得 (ページネーション)
+  // Step 1: Fetch all tracks (paginated)
   while (true) {
     const response = await fetch(
       `https://api.spotify.com/v1/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}`,
@@ -836,10 +836,10 @@ export async function fetchAllTracksWithFeatures(
     offset += limit;
   }
 
-  // ステップ2: トラックIDを抽出
+  // Step 2: Extract track IDs
   const trackIds = allTracks.map(item => item.track.id);
 
-  // ステップ3: オーディオ特徴を100件ずつ取得
+  // Step 3: Fetch audio features in batches of 100
   const features: AudioFeatures[] = [];
   for (let i = 0; i < trackIds.length; i += 100) {
     const batch = trackIds.slice(i, i + 100);
@@ -851,7 +851,7 @@ export async function fetchAllTracksWithFeatures(
     features.push(...data.audio_features);
   }
 
-  // ステップ4: トラックと特徴をマージ
+  // Step 4: Merge tracks with features
   return allTracks.map((item, index) => ({
     track: item.track,
     features: features[index] || null,
@@ -862,7 +862,7 @@ export async function fetchAllTracksWithFeatures(
 
 ---
 
-### 2. クライアントサイドフィルタリング
+### 2. Client-Side Filtering
 
 ```typescript
 // lib/filter-utils.ts
@@ -874,7 +874,7 @@ export function applyFilters(
   return tracks.filter(({ features }) => {
     if (!features) return false;
 
-    // BPMフィルター
+    // BPM filter
     if (
       features.tempo < filters.bpmRange[0] ||
       features.tempo > filters.bpmRange[1]
@@ -882,18 +882,18 @@ export function applyFilters(
       return false;
     }
 
-    // キーフィルター
+    // Key filter
     if (filters.keys.length > 0 && !filters.keys.includes(features.key)) {
       return false;
     }
 
-    // モードフィルター
+    // Mode filter
     if (filters.mode !== null) {
       const expectedMode = filters.mode === 'major' ? 1 : 0;
       if (features.mode !== expectedMode) return false;
     }
 
-    // エネルギーフィルター
+    // Energy filter
     if (
       features.energy < filters.energyRange[0] ||
       features.energy > filters.energyRange[1]
@@ -908,7 +908,7 @@ export function applyFilters(
 
 ---
 
-### 3. Rate Limit処理
+### 3. Rate Limit Handling
 
 ```typescript
 // lib/api-utils.ts
@@ -922,30 +922,30 @@ export async function fetchWithRetry(
     const response = await fetch(url, options);
 
     if (response.status === 429) {
-      // Rate Limited
+      // Rate limited
       const retryAfter = response.headers.get('Retry-After');
       const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 2000 * (i + 1);
 
-      console.warn(`Rate限制。${waitTime}ms後に再試行...`);
+      console.warn(`Rate limited. Retrying after ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       continue;
     }
 
     if (response.ok) return response;
 
-    // その他のエラー
-    if (i === maxRetries - 1) throw new Error(`リクエスト失敗: ${response.status}`);
+    // Other errors
+    if (i === maxRetries - 1) throw new Error(`Request failed: ${response.status}`);
   }
 
-  throw new Error('最大リトライ回数を超えました');
+  throw new Error('Max retries exceeded');
 }
 ```
 
 ---
 
-## パフォーマンス考慮事項
+## Performance Considerations
 
-### 遅延ロード戦略
+### Lazy Loading Strategy
 
 ```typescript
 // components/playlist/TrackList.tsx
@@ -955,18 +955,18 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 export function TrackList({ tracks }: { tracks: TrackWithFeatures[] }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // 大規模リスト用の仮想スクロール
+  // Virtual scrolling for large lists
   const virtualizer = useVirtualizer({
     count: tracks.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 64, // 推定行高さ(ピクセル)
-    overscan: 10, // 上下に10個余分にレンダリング
+    estimateSize: () => 64, // Estimated row height
+    overscan: 10, // Render 10 extra items
   });
 
   return (
     <div ref={parentRef} style={{ height: '600px', overflow: 'auto' }}>
       <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => (
+        {virtualizer.getVirtualItems().map(virtualRow => (
           <TrackRow
             key={tracks[virtualRow.index].track.id}
             track={tracks[virtualRow.index]}
@@ -987,20 +987,20 @@ export function TrackList({ tracks }: { tracks: TrackWithFeatures[] }) {
 
 ---
 
-## まとめ
+## Summary
 
-このアーキテクチャは以下を提供します：
+This architecture provides:
 
-✅ **明確なデータフロー** - ユーザー操作からAPIからUIまで
-✅ **効率的なキャッシュ** - 3層戦略
-✅ **型安全性** - 完全なTypeScript定義
-✅ **スケーラビリティ** - バッチ処理と仮想スクロール
-✅ **回復力** - リトライロジックとエラーハンドリング
-✅ **パフォーマンス** - 適切なメモ化と遅延ロード
+✅ **Clear data flow** from user interaction to API to UI
+✅ **Efficient caching** with three-tier strategy
+✅ **Type safety** with complete TypeScript definitions
+✅ **Scalability** with batch processing and virtual scrolling
+✅ **Resilience** with retry logic and error handling
+✅ **Performance** with proper memoization and lazy loading
 
-すべての図はGitHub上でMermaidシンタックスを使用してレンダリングされます。
+All diagrams are rendered on GitHub using Mermaid syntax.
 
 ---
 
-**最終更新:** 2025-10-22
-**バージョン:** 1.0
+**Last Updated:** 2025-10-22
+**Version:** 1.0
