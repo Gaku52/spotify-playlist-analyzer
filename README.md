@@ -110,29 +110,73 @@ spotify-playlist-analyzer/
 
 ## Deployment
 
-This project is configured for deployment on Vercel:
+### Automatic Deployment with GitHub Actions
 
-1. Push your code to GitHub
-2. Import the project in Vercel
-3. Add environment variables in Vercel dashboard:
-   - `SPOTIFY_CLIENT_ID`
-   - `SPOTIFY_CLIENT_SECRET`
-   - `NEXTAUTH_SECRET`
-   - `NEXTAUTH_URL` (use your production URL)
-4. Update Spotify redirect URI to include your production URL
-5. Deploy
+This project includes GitHub Actions workflows for CI/CD:
+
+- **CI Pipeline**: Runs on every push and PR
+  - Lints code with ESLint
+  - Type checks with TypeScript
+  - Builds the application
+
+- **Vercel Deployment**: Automatically deploys to Vercel on push to main/master
+
+### Manual Deployment to Vercel
+
+1. **Fork and clone this repository**
+
+2. **Install Vercel CLI**
+   ```bash
+   npm i -g vercel
+   ```
+
+3. **Login to Vercel**
+   ```bash
+   vercel login
+   ```
+
+4. **Deploy**
+   ```bash
+   vercel
+   ```
+
+5. **Set up environment variables in Vercel Dashboard**:
+   - `NEXTAUTH_URL` - Your production URL (e.g., https://your-app.vercel.app)
+   - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
+   - `SPOTIFY_CLIENT_ID` - From Spotify Developer Dashboard
+   - `SPOTIFY_CLIENT_SECRET` - From Spotify Developer Dashboard
+   - `SPOTIFY_REDIRECT_URI` - Your production callback URL (e.g., https://your-app.vercel.app/api/auth/callback/spotify)
+
+6. **Update Spotify App Settings**:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Add your production callback URL to Redirect URIs
+
+### GitHub Secrets for CI/CD
+
+To enable automated deployments, add these secrets to your GitHub repository:
+
+**Settings → Secrets and variables → Actions**:
+
+- `VERCEL_TOKEN` - Get from Vercel Account Settings → Tokens
+- `VERCEL_ORG_ID` - Found in Vercel project settings
+- `VERCEL_PROJECT_ID` - Found in Vercel project settings
+- `NEXTAUTH_SECRET` - Generated secret
+- `SPOTIFY_CLIENT_ID` - From Spotify Dashboard
+- `SPOTIFY_CLIENT_SECRET` - From Spotify Dashboard
 
 **Live URL**: [https://music.ogadix.com](https://music.ogadix.com)
 
 ## Roadmap
 
-### Phase 1 (MVP)
+### Phase 1 (MVP) ✅ COMPLETED
 - [x] Project setup
-- [ ] Spotify authentication
-- [ ] Playlist listing
-- [ ] Audio features analysis
-- [ ] Filtering functionality
-- [ ] Playlist creation
+- [x] Spotify authentication
+- [x] Playlist listing
+- [x] Audio features analysis
+- [x] Filtering functionality
+- [x] Playlist creation
+- [x] CI/CD with GitHub Actions
+- [x] Vercel deployment configuration
 
 ### Phase 2
 - [ ] Preset saving
