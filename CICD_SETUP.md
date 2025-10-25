@@ -158,3 +158,7 @@ If you need to rollback a deployment:
 
 - [Vercel Git Integration](https://vercel.com/docs/deployments/git)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
+
+---
+
+Last updated: 2025-10-25
