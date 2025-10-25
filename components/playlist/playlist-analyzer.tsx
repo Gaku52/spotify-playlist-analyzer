@@ -219,6 +219,9 @@ export function PlaylistAnalyzer({
         console.log(`[Client] Fetching batch ${i + 1}/${batches.length} (${batch.length} tracks)...`)
 
         try {
+          console.log(`[Client] Sending request to /api/audio-features with ${batch.length} track IDs`)
+          console.log(`[Client] First 3 track IDs:`, batch.slice(0, 3))
+
           const response = await fetch("/api/audio-features", {
             method: "POST",
             headers: {
@@ -226,6 +229,9 @@ export function PlaylistAnalyzer({
             },
             body: JSON.stringify({ trackIds: batch }),
           })
+
+          console.log(`[Client] Response status: ${response.status} ${response.statusText}`)
+          console.log(`[Client] Response headers:`, Object.fromEntries(response.headers.entries()))
 
           if (!response.ok) {
             const errorText = await response.text()
@@ -235,7 +241,16 @@ export function PlaylistAnalyzer({
           }
 
           const data = await response.json()
-          if (data.audioFeatures) {
+          console.log(`[Client] Response data keys:`, Object.keys(data))
+          console.log(`[Client] Response data.success:`, data.success)
+          console.log(`[Client] Response data.audioFeatures type:`, typeof data.audioFeatures)
+          console.log(`[Client] Response data.audioFeatures is array:`, Array.isArray(data.audioFeatures))
+          console.log(`[Client] Response data.audioFeatures length:`, data.audioFeatures?.length)
+          console.log(`[Client] First audio feature:`, data.audioFeatures?.[0])
+          console.log(`[Client] Full response:`, JSON.stringify(data).substring(0, 500))
+
+          if (data.audioFeatures && Array.isArray(data.audioFeatures)) {
+            console.log(`[Client] Processing ${data.audioFeatures.length} audio features`)
             allFeatures.push(...data.audioFeatures)
 
             // Update tracks with fetched features
@@ -250,7 +265,8 @@ export function PlaylistAnalyzer({
 
             console.log(`[Client] Batch ${i + 1}/${batches.length} complete. Total features: ${allFeatures.length}`)
           } else {
-            console.error(`[Client] Batch ${i + 1} returned no audio features`)
+            console.error(`[Client] Batch ${i + 1} returned no audio features or not an array`)
+            console.error(`[Client] data.audioFeatures value:`, data.audioFeatures)
             setLoadingError(`No audio features returned from API`)
           }
         } catch (error) {
