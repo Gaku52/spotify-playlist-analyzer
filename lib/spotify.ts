@@ -21,12 +21,13 @@ export class SpotifyClient {
     options?: RequestInit,
     retries = 3
   ): Promise<T> {
-    console.log(`Spotify API Request: ${endpoint}`)
-    console.log(`Access Token: ${this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'MISSING'}`)
+    const fullUrl = `${SPOTIFY_API_BASE}${endpoint}`
+    console.log(`[Spotify API] Request: ${options?.method || 'GET'} ${fullUrl}`)
+    console.log(`[Spotify API] Access Token: ${this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'MISSING'}`)
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
+        const response = await fetch(fullUrl, {
           ...options,
           headers: {
             Authorization: `Bearer ${this.accessToken}`,
@@ -35,31 +36,50 @@ export class SpotifyClient {
           },
         })
 
+        console.log(`[Spotify API] Response Status: ${response.status} ${response.statusText}`)
+
         // Handle rate limiting
         if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After")
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (attempt + 1) * 2000
-          console.log(`Rate limited. Waiting ${waitTime}ms before retry...`)
+          console.log(`[Spotify API] Rate limited. Waiting ${waitTime}ms before retry...`)
           await delay(waitTime)
           continue
         }
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}))
-          console.error(`Spotify API Error:`, {
+          const errorText = await response.text()
+          let error
+          try {
+            error = JSON.parse(errorText)
+          } catch {
+            error = { message: errorText }
+          }
+
+          console.error(`[Spotify API] Error Details:`, {
             status: response.status,
-            endpoint,
+            statusText: response.statusText,
+            url: fullUrl,
+            method: options?.method || 'GET',
             error,
+            attempt: attempt + 1,
+            maxRetries: retries,
           })
+
           throw new Error(
             error.error?.message ||
+            error.message ||
             `Spotify API request failed with status ${response.status}`
           )
         }
 
         return response.json()
       } catch (error) {
-        if (attempt === retries - 1) throw error
+        if (attempt === retries - 1) {
+          console.error(`[Spotify API] Max retries reached for ${fullUrl}`)
+          throw error
+        }
+        console.log(`[Spotify API] Retry ${attempt + 1}/${retries - 1} after error`)
         // Wait before retrying
         await delay((attempt + 1) * 1000)
       }

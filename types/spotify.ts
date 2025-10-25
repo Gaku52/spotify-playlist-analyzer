@@ -56,7 +56,7 @@ export interface AudioFeatures {
 
 export interface PlaylistTrack {
   added_at: string
-  track: SpotifyTrack
+  track: SpotifyTrack | null
 }
 
 export interface FilterOptions {

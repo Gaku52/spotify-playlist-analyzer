@@ -42,6 +42,8 @@ async function refreshAccessToken(token: ExtendedJWT): Promise<ExtendedJWT> {
   try {
     const url = "https://accounts.spotify.com/api/token"
 
+    console.log("[Auth] Refreshing access token...")
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -63,8 +65,14 @@ async function refreshAccessToken(token: ExtendedJWT): Promise<ExtendedJWT> {
     const refreshedTokens = await response.json()
 
     if (!response.ok) {
+      console.error("[Auth] Token refresh failed:", {
+        status: response.status,
+        error: refreshedTokens,
+      })
       throw refreshedTokens
     }
+
+    console.log("[Auth] Token refreshed successfully")
 
     return {
       ...token,
@@ -73,7 +81,7 @@ async function refreshAccessToken(token: ExtendedJWT): Promise<ExtendedJWT> {
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     }
   } catch (error) {
-    console.error("Error refreshing access token:", error)
+    console.error("[Auth] Error refreshing access token:", error)
     return {
       ...token,
       error: "RefreshAccessTokenError",
