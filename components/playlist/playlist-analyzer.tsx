@@ -291,7 +291,7 @@ export function PlaylistAnalyzer({
   }, [initialTracks])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-32">
       {/* Loading Progress */}
       {isLoadingFeatures && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
