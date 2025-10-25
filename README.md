@@ -110,16 +110,29 @@ spotify-playlist-analyzer/
 
 ## Deployment
 
-### Automatic Deployment with GitHub Actions
+### 🚀 Hybrid CI/CD Approach (Best Practice)
 
-This project includes GitHub Actions workflows for CI/CD:
+This project uses a **hybrid approach** combining the best of both worlds:
 
-- **CI Pipeline**: Runs on every push and PR
-  - Lints code with ESLint
-  - Type checks with TypeScript
-  - Builds the application
+1. **Vercel Git Integration** - Handles all deployments
+   - Automatic deployments on push to master
+   - Preview deployments for pull requests
+   - Zero configuration required after setup
+   - Fast, optimized builds
 
-- **Vercel Deployment**: Automatically deploys to Vercel on push to main/master
+2. **GitHub Actions** - Code quality checks only
+   - ESLint validation
+   - TypeScript type checking
+   - Build verification
+   - No deployment secrets needed
+
+**Benefits:**
+- ✅ Fast, reliable deployments via Vercel
+- ✅ Code quality enforcement via GitHub Actions
+- ✅ Minimal GitHub Actions minutes usage
+- ✅ Zero maintenance required
+
+📚 **[Complete CI/CD Setup Guide](./CICD_SETUP.md)**
 
 ### Manual Deployment to Vercel
 
@@ -151,20 +164,15 @@ This project includes GitHub Actions workflows for CI/CD:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Add your production callback URL to Redirect URIs
 
-### GitHub Secrets for CI/CD
-
-To enable automated deployments, add these secrets to your GitHub repository:
-
-**Settings → Secrets and variables → Actions**:
-
-- `VERCEL_TOKEN` - Get from Vercel Account Settings → Tokens
-- `VERCEL_ORG_ID` - Found in Vercel project settings
-- `VERCEL_PROJECT_ID` - Found in Vercel project settings
-- `NEXTAUTH_SECRET` - Generated secret
-- `SPOTIFY_CLIENT_ID` - From Spotify Dashboard
-- `SPOTIFY_CLIENT_SECRET` - From Spotify Dashboard
+7. **Connect to Vercel Git Integration**:
+   - Go to Vercel Dashboard → Settings → Git
+   - Connect your GitHub repository
+   - Set production branch to `master`
+   - Done! Future pushes will auto-deploy
 
 **Live URL**: [https://music.ogadix.com](https://music.ogadix.com)
+
+**Note**: With the hybrid approach, you don't need to configure GitHub Secrets for deployment. Vercel handles everything automatically once you connect your repository.
 
 ## Roadmap
 
