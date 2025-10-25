@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     console.log(`[Audio Features API] Fetching features for ${trackIds.length} tracks`)
     console.log(`[Audio Features API] Track IDs:`, trackIds)
 
-    // Directly call Spotify API and capture raw response
+    // Try audio-analysis endpoint instead of audio-features (which is restricted in Dev Mode)
     try {
       // Test single track endpoint
       const testTrackId = trackIds[0]
-      const endpoint = `/audio-features/${testTrackId}`
+      const endpoint = `/audio-analysis/${testTrackId}`
 
-      console.log(`[Audio Features API] Testing endpoint: ${endpoint}`)
+      console.log(`[Audio Features API] Testing audio-analysis endpoint: ${endpoint}`)
 
       // Make direct fetch to Spotify API
       const spotifyResponse = await fetch(`https://api.spotify.com/v1${endpoint}`, {
@@ -60,10 +60,33 @@ export async function POST(request: Request) {
 
       console.log(`[Audio Features API] Parsed response:`, JSON.stringify(rawData, null, 2))
 
-      // Return raw response to client for debugging
+      // Extract audio features from audio-analysis response
+      let audioFeature = null
+      if (spotifyResponse.ok && rawData.track) {
+        // Convert audio-analysis format to audio-features format
+        audioFeature = {
+          id: testTrackId,
+          tempo: rawData.track.tempo,
+          key: rawData.track.key,
+          mode: rawData.track.mode,
+          time_signature: rawData.track.time_signature,
+          loudness: rawData.track.loudness,
+          duration_ms: Math.round(rawData.track.duration * 1000),
+          // audio-analysis doesn't provide these, so we set defaults or omit
+          // energy: rawData.track.energy || 0,
+          // danceability: rawData.track.danceability || 0,
+          // valence: rawData.track.valence || 0,
+          // acousticness: rawData.track.acousticness || 0,
+          // instrumentalness: rawData.track.instrumentalness || 0,
+          // liveness: rawData.track.liveness || 0,
+          // speechiness: rawData.track.speechiness || 0,
+        }
+      }
+
+      // Return response to client for debugging
       return NextResponse.json({
         success: spotifyResponse.ok,
-        audioFeatures: spotifyResponse.ok && rawData.id ? [rawData] : [],
+        audioFeatures: audioFeature ? [audioFeature] : [],
         debug: {
           requestedTrackIds: trackIds,
           requestedCount: trackIds.length,
@@ -72,6 +95,8 @@ export async function POST(request: Request) {
           spotifyStatusText: spotifyResponse.statusText,
           rawResponse: rawData,
           endpoint: endpoint,
+          extractedFeature: audioFeature,
+          note: "Using audio-analysis API instead of audio-features (Dev Mode compatible)"
         }
       })
     } catch (fetchError) {
