@@ -30,6 +30,9 @@ const SPOTIFY_SCOPES = [
   "playlist-modify-private",
   "user-library-read",
   "user-top-read",
+  "streaming", // Required for Web Playback SDK
+  "user-modify-playback-state", // Control playback
+  "user-read-playback-state", // Read playback state
 ].join(" ")
 
 const SPOTIFY_AUTHORIZATION_URL =

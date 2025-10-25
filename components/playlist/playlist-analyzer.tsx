@@ -6,6 +6,7 @@ import { FilterPanel } from "./filter-panel"
 import { TrackList } from "./track-list"
 import { StatsPanel } from "./stats-panel"
 import { CreatePlaylistButton } from "./create-playlist-button"
+import { SpotifyPlayer, playTrack } from "./spotify-player"
 
 interface PlaylistAnalyzerProps {
   playlist: SpotifyPlaylist
@@ -16,7 +17,8 @@ interface PlaylistAnalyzerProps {
 
 export function PlaylistAnalyzer({
   tracks: initialTracks,
-  userId
+  userId,
+  accessToken
 }: PlaylistAnalyzerProps) {
   const [tracks, setTracks] = useState(initialTracks)
   const [filters, setFilters] = useState<FilterOptions>({})
@@ -24,6 +26,8 @@ export function PlaylistAnalyzer({
   const [isLoadingFeatures, setIsLoadingFeatures] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [loadingError, setLoadingError] = useState<string | null>(null)
+  const [deviceId, setDeviceId] = useState<string | null>(null)
+  const [playbackError, setPlaybackError] = useState<string | null>(null)
 
   // Filter tracks based on current filters
   const filteredTracks = useMemo(() => {
@@ -182,6 +186,23 @@ export function PlaylistAnalyzer({
     }
   }
 
+  const handlePlayTrack = async (trackUri: string) => {
+    if (!deviceId) {
+      setPlaybackError("Spotify player not ready. Please wait.")
+      return
+    }
+
+    try {
+      setPlaybackError(null)
+      await playTrack(accessToken, deviceId, trackUri)
+    } catch (error) {
+      console.error("Error playing track:", error)
+      setPlaybackError(
+        error instanceof Error ? error.message : "Failed to play track"
+      )
+    }
+  }
+
   // Analyze BPM from preview URLs on client side
   useEffect(() => {
     const analyzeBPM = async () => {
@@ -306,6 +327,26 @@ export function PlaylistAnalyzer({
           </div>
         </div>
       )}
+
+      {/* Spotify Player */}
+      <SpotifyPlayer
+        accessToken={accessToken}
+        onReady={(id) => {
+          console.log("[PlaylistAnalyzer] Player ready with device ID:", id)
+          setDeviceId(id)
+        }}
+      />
+
+      {/* Playback Error */}
+      {playbackError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+          <div className="flex items-start gap-2">
+            <span className="text-sm font-semibold text-red-900 dark:text-red-100">Playback Error:</span>
+            <span className="text-sm text-red-800 dark:text-red-200">{playbackError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Panel */}
       <StatsPanel stats={stats} totalTracks={tracks.length} />
 
@@ -343,7 +384,11 @@ export function PlaylistAnalyzer({
             Tracks ({filteredTracks.length})
           </h2>
         </div>
-        <TrackList tracks={filteredTracks} />
+        <TrackList
+          tracks={filteredTracks}
+          onPlayTrack={handlePlayTrack}
+          canPlay={deviceId !== null}
+        />
       </div>
     </div>
   )

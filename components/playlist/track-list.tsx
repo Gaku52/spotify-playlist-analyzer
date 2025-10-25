@@ -1,7 +1,11 @@
+"use client"
+
 import { ValidPlaylistTrack, AudioFeatures } from "@/types"
 
 interface TrackListProps {
   tracks: Array<ValidPlaylistTrack & { audioFeatures?: AudioFeatures }>
+  onPlayTrack?: (trackUri: string) => void
+  canPlay?: boolean
 }
 
 const KEYS = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"]
@@ -12,7 +16,7 @@ function formatDuration(ms: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`
 }
 
-export function TrackList({ tracks }: TrackListProps) {
+export function TrackList({ tracks, onPlayTrack, canPlay = false }: TrackListProps) {
   if (tracks.length === 0) {
     return (
       <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
@@ -24,11 +28,22 @@ export function TrackList({ tracks }: TrackListProps) {
   // Check if any track has audio features
   const hasAudioFeatures = tracks.some(track => track.audioFeatures !== undefined)
 
+  const handlePlay = (trackUri: string) => {
+    if (onPlayTrack) {
+      onPlayTrack(trackUri)
+    }
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/50">
           <tr>
+            {canPlay && (
+              <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Play
+              </th>
+            )}
             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               #
             </th>
@@ -69,6 +84,23 @@ export function TrackList({ tracks }: TrackListProps) {
               key={item.track.id}
               className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
             >
+              {canPlay && (
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => handlePlay(item.track.uri)}
+                    className="rounded-full p-2 text-green-600 transition-colors hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/20"
+                    title="Play track"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                </td>
+              )}
               <td className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
                 {index + 1}
               </td>
