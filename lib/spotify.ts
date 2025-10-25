@@ -92,7 +92,7 @@ export class SpotifyClient {
 
   async getPlaylistTracks(
     playlistId: string,
-    limit = 100,
+    limit = 50,
     offset = 0
   ) {
     return this.fetch<{
@@ -108,7 +108,7 @@ export class SpotifyClient {
   async getAllPlaylistTracks(playlistId: string): Promise<PlaylistTrack[]> {
     const allTracks: PlaylistTrack[] = []
     let offset = 0
-    const limit = 100
+    const limit = 50
 
     console.log(`Fetching playlist tracks for ${playlistId}...`)
 
