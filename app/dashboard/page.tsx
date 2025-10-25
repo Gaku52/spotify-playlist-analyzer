@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { createSpotifyClient } from "@/lib/spotify"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { PlaylistGrid } from "@/components/dashboard/playlist-grid"
+import Image from "next/image"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -60,9 +61,11 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
                   {user.images?.[0]?.url && (
-                    <img
+                    <Image
                       src={user.images[0].url}
                       alt={user.display_name}
+                      width={40}
+                      height={40}
                       className="h-full w-full object-cover"
                     />
                   )}

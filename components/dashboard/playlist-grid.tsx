@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { SpotifyPlaylist } from "@/types"
 import { Music } from "lucide-react"
 
@@ -17,9 +18,11 @@ export function PlaylistGrid({ playlists }: PlaylistGridProps) {
         >
           <div className="aspect-square overflow-hidden bg-zinc-100 dark:bg-zinc-800">
             {playlist.images?.[0]?.url ? (
-              <img
+              <Image
                 src={playlist.images[0].url}
                 alt={playlist.name}
+                width={300}
+                height={300}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             ) : (

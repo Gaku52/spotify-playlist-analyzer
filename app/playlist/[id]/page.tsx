@@ -4,6 +4,7 @@ import { createSpotifyClient } from "@/lib/spotify"
 import { PlaylistAnalyzer } from "@/components/playlist/playlist-analyzer"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import Image from "next/image"
 
 interface PlaylistPageProps {
   params: Promise<{ id: string }>
@@ -98,9 +99,11 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
             <div className="flex gap-6">
               {playlist.images?.[0]?.url && (
                 <div className="h-48 w-48 flex-shrink-0 overflow-hidden rounded-lg shadow-lg">
-                  <img
+                  <Image
                     src={playlist.images[0].url}
                     alt={playlist.name}
+                    width={192}
+                    height={192}
                     className="h-full w-full object-cover"
                   />
                 </div>
