@@ -6,6 +6,9 @@ import {
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 
+// Helper function to add delay between requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 export class SpotifyClient {
   private accessToken: string
 
@@ -15,23 +18,46 @@ export class SpotifyClient {
 
   private async fetch<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
+    retries = 3
   ): Promise<T> {
-    const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    })
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
+          ...options,
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+            ...options?.headers,
+          },
+        })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || "Spotify API request failed")
+        // Handle rate limiting
+        if (response.status === 429) {
+          const retryAfter = response.headers.get("Retry-After")
+          const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : (attempt + 1) * 2000
+          console.log(`Rate limited. Waiting ${waitTime}ms before retry...`)
+          await delay(waitTime)
+          continue
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}))
+          throw new Error(
+            error.error?.message ||
+            `Spotify API request failed with status ${response.status}`
+          )
+        }
+
+        return response.json()
+      } catch (error) {
+        if (attempt === retries - 1) throw error
+        // Wait before retrying
+        await delay((attempt + 1) * 1000)
+      }
     }
 
-    return response.json()
+    throw new Error("Max retries reached")
   }
 
   async getCurrentUser() {
@@ -76,17 +102,24 @@ export class SpotifyClient {
     let offset = 0
     const limit = 100
 
+    console.log(`Fetching playlist tracks for ${playlistId}...`)
+
     while (true) {
       const response = await this.getPlaylistTracks(playlistId, limit, offset)
       allTracks.push(...response.items)
+
+      console.log(`Fetched ${allTracks.length}/${response.total} playlist tracks...`)
 
       if (response.items.length < limit) {
         break
       }
 
       offset += limit
+      // Add small delay between pagination requests
+      await delay(200)
     }
 
+    console.log(`Successfully fetched all ${allTracks.length} playlist tracks`)
     return allTracks
   }
 
@@ -104,6 +137,8 @@ export class SpotifyClient {
     let offset = 0
     const limit = 50
 
+    console.log("Fetching saved tracks...")
+
     while (true) {
       const response = await this.getSavedTracks(limit, offset)
       const formattedTracks = response.items.map((item) => ({
@@ -112,13 +147,18 @@ export class SpotifyClient {
       }))
       allTracks.push(...formattedTracks)
 
+      console.log(`Fetched ${allTracks.length}/${response.total} saved tracks...`)
+
       if (response.items.length < limit) {
         break
       }
 
       offset += limit
+      // Add small delay between pagination requests
+      await delay(200)
     }
 
+    console.log(`Successfully fetched all ${allTracks.length} saved tracks`)
     return allTracks
   }
 
@@ -131,7 +171,12 @@ export class SpotifyClient {
 
     const allFeatures: AudioFeatures[] = []
 
-    for (const chunk of chunks) {
+    console.log(`Fetching audio features for ${trackIds.length} tracks in ${chunks.length} batches...`)
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
+      console.log(`Fetching batch ${i + 1}/${chunks.length}...`)
+
       const response = await this.fetch<{
         audio_features: (AudioFeatures | null)[]
       }>(`/audio-features?ids=${chunk.join(",")}`)
@@ -140,8 +185,14 @@ export class SpotifyClient {
         (f): f is AudioFeatures => f !== null
       )
       allFeatures.push(...validFeatures)
+
+      // Add delay between batches to avoid rate limiting (except for last batch)
+      if (i < chunks.length - 1) {
+        await delay(400) // 400ms delay between requests
+      }
     }
 
+    console.log(`Successfully fetched ${allFeatures.length} audio features`)
     return allFeatures
   }
 
@@ -168,13 +219,19 @@ export class SpotifyClient {
       chunks.push(trackUris.slice(i, i + 100))
     }
 
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
       await this.fetch(`/playlists/${playlistId}/tracks`, {
         method: "POST",
         body: JSON.stringify({
           uris: chunk,
         }),
       })
+
+      // Add delay between batches to avoid rate limiting (except for last batch)
+      if (i < chunks.length - 1) {
+        await delay(400) // 400ms delay between requests
+      }
     }
 
     return { success: true }
