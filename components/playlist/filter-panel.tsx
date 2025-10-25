@@ -14,8 +14,9 @@ export function FilterPanel({ filters, onChange, hasAudioFeatures = false }: Fil
       {!hasAudioFeatures && (
         <div className="rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            <strong>Note:</strong> Audio features (BPM, Key, Energy) could not be loaded for this playlist.
-            This may be due to playlist size or API rate limits. You can still filter by popularity and duration.
+            <strong>Note:</strong> BPM analysis uses 30-second audio previews.
+            Some tracks may not have preview URLs available, so BPM data may be incomplete.
+            You can still filter by popularity and duration for all tracks.
           </p>
         </div>
       )}

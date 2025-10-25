@@ -182,10 +182,13 @@ export function PlaylistAnalyzer({
     }
   }
 
-  // Fetch audio features incrementally on client side
+  // Analyze BPM from preview URLs on client side
   useEffect(() => {
-    const fetchAudioFeatures = async () => {
-      // Get all track IDs that don't have audio features yet
+    const analyzeBPM = async () => {
+      // Dynamic import to avoid SSR issues
+      const { analyzeBPMBatch } = await import('@/lib/bpm-analyzer')
+
+      // Get all tracks that don't have audio features yet
       const tracksWithoutFeatures = initialTracks.filter(
         (track) => !track.audioFeatures && track.track.id
       )
@@ -194,105 +197,76 @@ export function PlaylistAnalyzer({
         return // All tracks already have features
       }
 
-      const trackIds = tracksWithoutFeatures
-        .map((track) => track.track.id)
-        .filter((id): id is string => !!id)
-
-      console.log(`[Client] Fetching audio features for ${trackIds.length} tracks...`)
+      console.log(`[Client] Analyzing BPM for ${tracksWithoutFeatures.length} tracks using preview URLs...`)
       setIsLoadingFeatures(true)
       setLoadingProgress(0)
 
-      // Split into batches of 50
-      const batchSize = 50
-      const batches = []
-      for (let i = 0; i < trackIds.length; i += batchSize) {
-        batches.push(trackIds.slice(i, i + batchSize))
+      // Prepare track list with preview URLs
+      const tracksToAnalyze = tracksWithoutFeatures
+        .filter((track) => track.track.preview_url)
+        .map((track) => ({
+          id: track.track.id,
+          previewUrl: track.track.preview_url,
+        }))
+
+      const tracksWithoutPreview = tracksWithoutFeatures.length - tracksToAnalyze.length
+
+      console.log(`[Client] ${tracksToAnalyze.length} tracks have preview URLs`)
+      console.log(`[Client] ${tracksWithoutPreview} tracks do not have preview URLs`)
+
+      if (tracksToAnalyze.length === 0) {
+        setLoadingError('No preview URLs available for BPM analysis')
+        setIsLoadingFeatures(false)
+        return
       }
 
-      console.log(`[Client] Processing ${batches.length} batches...`)
+      try {
+        // Analyze BPM for all tracks
+        const results = await analyzeBPMBatch(tracksToAnalyze, (current, total) => {
+          setLoadingProgress(Math.round((current / total) * 100))
+        })
 
-      // Fetch features batch by batch
-      const allFeatures: AudioFeatures[] = []
+        console.log(`[Client] BPM analysis complete: ${results.size} results`)
 
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i]
-        console.log(`[Client] Fetching batch ${i + 1}/${batches.length} (${batch.length} tracks)...`)
-
-        try {
-          console.log(`[Client] Sending request to /api/audio-features with ${batch.length} track IDs`)
-          console.log(`[Client] First 3 track IDs:`, batch.slice(0, 3))
-
-          const response = await fetch("/api/audio-features", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ trackIds: batch }),
+        // Update tracks with BPM data
+        setTracks((prevTracks) =>
+          prevTracks.map((track) => {
+            const result = results.get(track.track.id)
+            if (result && result.success) {
+              return {
+                ...track,
+                audioFeatures: {
+                  id: track.track.id,
+                  tempo: result.tempo,
+                  // Other fields not available from preview URL analysis
+                  key: -1,
+                  mode: -1,
+                  time_signature: 4,
+                  acousticness: 0,
+                  danceability: 0,
+                  energy: 0,
+                  instrumentalness: 0,
+                  liveness: 0,
+                  loudness: 0,
+                  speechiness: 0,
+                  valence: 0,
+                },
+              }
+            }
+            return track
           })
+        )
 
-          console.log(`[Client] Response status: ${response.status} ${response.statusText}`)
-          console.log(`[Client] Response headers:`, Object.fromEntries(response.headers.entries()))
-
-          if (!response.ok) {
-            const errorText = await response.text()
-            console.error(`[Client] Batch ${i + 1} failed: ${response.status} - ${errorText}`)
-            setLoadingError(`Failed to fetch audio features: ${response.status} ${errorText}`)
-            continue
-          }
-
-          const data = await response.json()
-          console.log(`[Client] ===== FULL API RESPONSE =====`)
-          console.log(`[Client] Response data keys:`, Object.keys(data))
-          console.log(`[Client] Response data.success:`, data.success)
-          console.log(`[Client] Response data.audioFeatures type:`, typeof data.audioFeatures)
-          console.log(`[Client] Response data.audioFeatures is array:`, Array.isArray(data.audioFeatures))
-          console.log(`[Client] Response data.audioFeatures length:`, data.audioFeatures?.length)
-          console.log(`[Client] First audio feature:`, data.audioFeatures?.[0])
-          console.log(`[Client] Second audio feature:`, data.audioFeatures?.[1])
-          console.log(`[Client] Third audio feature:`, data.audioFeatures?.[2])
-          console.log(`[Client] Debug info:`, data.debug)
-          console.log(`[Client] Full response (first 1000 chars):`, JSON.stringify(data).substring(0, 1000))
-          console.log(`[Client] ===== END RESPONSE =====`)
-
-          if (data.audioFeatures && Array.isArray(data.audioFeatures)) {
-            console.log(`[Client] Processing ${data.audioFeatures.length} audio features`)
-            allFeatures.push(...data.audioFeatures)
-
-            // Update tracks with fetched features
-            setTracks((prevTracks) =>
-              prevTracks.map((track) => {
-                const feature = data.audioFeatures.find(
-                  (f: AudioFeatures) => f.id === track.track.id
-                )
-                return feature ? { ...track, audioFeatures: feature } : track
-              })
-            )
-
-            console.log(`[Client] Batch ${i + 1}/${batches.length} complete. Total features: ${allFeatures.length}`)
-          } else {
-            console.error(`[Client] Batch ${i + 1} returned no audio features or not an array`)
-            console.error(`[Client] data.audioFeatures value:`, data.audioFeatures)
-            setLoadingError(`No audio features returned from API`)
-          }
-        } catch (error) {
-          console.error(`[Client] Error fetching batch ${i + 1}:`, error)
-          setLoadingError(`Error: ${error instanceof Error ? error.message : String(error)}`)
-        }
-
-        // Update progress
-        setLoadingProgress(Math.round(((i + 1) / batches.length) * 100))
-
-        // Add delay between batches to avoid rate limiting
-        if (i < batches.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-        }
+        console.log(`[Client] Updated tracks with BPM data`)
+      } catch (error) {
+        console.error(`[Client] Error analyzing BPM:`, error)
+        setLoadingError(`Error: ${error instanceof Error ? error.message : String(error)}`)
       }
 
       setIsLoadingFeatures(false)
-      console.log(`[Client] Finished fetching audio features. Total: ${allFeatures.length}`)
     }
 
-    fetchAudioFeatures()
+    analyzeBPM()
   }, [initialTracks])
 
   return (
@@ -302,7 +276,7 @@ export function PlaylistAnalyzer({
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Loading audio features (BPM, Key, Energy)...
+              Analyzing BPM from audio previews...
             </span>
             <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
               {loadingProgress}%
@@ -314,6 +288,9 @@ export function PlaylistAnalyzer({
               style={{ width: `${loadingProgress}%` }}
             />
           </div>
+          <p className="mt-2 text-xs text-blue-800 dark:text-blue-200">
+            Using 30-second previews for BPM detection. Tracks without preview URLs will be skipped.
+          </p>
         </div>
       )}
 
