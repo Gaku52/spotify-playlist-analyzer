@@ -205,72 +205,57 @@ export class SpotifyClient {
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
-    // Try batch endpoint first (max 100 track IDs per request)
-    const chunks = []
-    const chunkSize = 50
-    for (let i = 0; i < trackIds.length; i += chunkSize) {
-      chunks.push(trackIds.slice(i, i + chunkSize))
-    }
-
     const allFeatures: AudioFeatures[] = []
 
-    console.log(`[Spotify API] Fetching audio features for ${trackIds.length} tracks in ${chunks.length} batches...`)
+    console.log(`[Spotify API] ===== TESTING SINGLE TRACK ENDPOINT =====`)
+    console.log(`[Spotify API] Fetching audio features for ${trackIds.length} tracks`)
+    console.log(`[Spotify API] Testing with FIRST track only: ${trackIds[0]}`)
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]
-      const endpoint = `/audio-features?ids=${chunk.join(",")}`
-      console.log(`[Spotify API] Batch ${i + 1}/${chunks.length}: Fetching ${chunk.length} tracks`)
-      console.log(`[Spotify API] Endpoint: ${endpoint.substring(0, 150)}...`)
-      console.log(`[Spotify API] Full endpoint:`, endpoint)
+    // Test with first track only
+    if (trackIds.length === 0) {
+      console.log(`[Spotify API] No track IDs provided`)
+      return []
+    }
 
-      try {
-        const response = await this.fetch<{
-          audio_features: (AudioFeatures | null)[]
-        }>(endpoint)
+    const testTrackId = trackIds[0]
+    const endpoint = `/audio-features/${testTrackId}`
 
-        console.log(`[Spotify API] ===== RAW RESPONSE START =====`)
-        console.log(`[Spotify API] Batch ${i + 1} raw response:`, JSON.stringify(response, null, 2))
-        console.log(`[Spotify API] ===== RAW RESPONSE END =====`)
-        console.log(`[Spotify API] Batch ${i + 1} raw response type:`, typeof response)
-        console.log(`[Spotify API] Batch ${i + 1} response keys:`, Object.keys(response))
-        console.log(`[Spotify API] Batch ${i + 1} audio_features type:`, typeof response.audio_features)
-        console.log(`[Spotify API] Batch ${i + 1} audio_features is array:`, Array.isArray(response.audio_features))
-        console.log(`[Spotify API] Batch ${i + 1} audio_features length:`, response.audio_features?.length)
+    console.log(`[Spotify API] Endpoint: ${endpoint}`)
+    console.log(`[Spotify API] Making request to Spotify API...`)
 
-        if (response.audio_features && Array.isArray(response.audio_features)) {
-          console.log(`[Spotify API] Batch ${i + 1} first item:`, JSON.stringify(response.audio_features[0]))
-          console.log(`[Spotify API] Batch ${i + 1} second item:`, JSON.stringify(response.audio_features[1]))
-          console.log(`[Spotify API] Batch ${i + 1} third item:`, JSON.stringify(response.audio_features[2]))
+    try {
+      const response = await this.fetch<AudioFeatures>(endpoint)
 
-          const validFeatures = response.audio_features.filter(
-            (f): f is AudioFeatures => f !== null
-          )
-          allFeatures.push(...validFeatures)
+      console.log(`[Spotify API] ===== SINGLE TRACK RAW RESPONSE START =====`)
+      console.log(`[Spotify API] Response:`, JSON.stringify(response, null, 2))
+      console.log(`[Spotify API] ===== SINGLE TRACK RAW RESPONSE END =====`)
 
-          console.log(`[Spotify API] Batch ${i + 1}/${chunks.length} complete: ${validFeatures.length} valid features (${response.audio_features.length - validFeatures.length} null)`)
-        } else {
-          console.error(`[Spotify API] Batch ${i + 1} has no audio_features array or it's not an array`)
-          console.error(`[Spotify API] Full response:`, JSON.stringify(response))
-        }
+      console.log(`[Spotify API] Response type:`, typeof response)
+      console.log(`[Spotify API] Response keys:`, Object.keys(response))
+      console.log(`[Spotify API] Response.id:`, response.id)
+      console.log(`[Spotify API] Response.tempo:`, response.tempo)
+      console.log(`[Spotify API] Response.energy:`, response.energy)
+      console.log(`[Spotify API] Response.key:`, response.key)
+      console.log(`[Spotify API] Response.danceability:`, response.danceability)
 
-        // Add delay between batches
-        if (i < chunks.length - 1) {
-          const delayMs = 1000
-          console.log(`[Spotify API] Waiting ${delayMs}ms before next batch...`)
-          await delay(delayMs)
-        }
-      } catch (error) {
-        console.error(`[Spotify API] Error fetching batch ${i + 1}/${chunks.length}:`, error)
-        console.error(`[Spotify API] Error type:`, error instanceof Error ? error.constructor.name : typeof error)
-        console.error(`[Spotify API] Error message:`, error instanceof Error ? error.message : String(error))
-        // Continue with next batch even if this one fails
-        if (i < chunks.length - 1) {
-          await delay(2000)
-        }
+      if (response && response.id) {
+        allFeatures.push(response)
+        console.log(`[Spotify API] ✅ Successfully fetched audio features for track ${testTrackId}`)
+      } else {
+        console.error(`[Spotify API] ❌ Response does not have id field`)
+      }
+    } catch (error) {
+      console.error(`[Spotify API] ❌ Error fetching track ${testTrackId}:`, error)
+      console.error(`[Spotify API] Error type:`, error instanceof Error ? error.constructor.name : typeof error)
+      console.error(`[Spotify API] Error message:`, error instanceof Error ? error.message : String(error))
+      if (error instanceof Error && error.stack) {
+        console.error(`[Spotify API] Error stack:`, error.stack)
       }
     }
 
-    console.log(`[Spotify API] Successfully fetched ${allFeatures.length} audio features out of ${trackIds.length} requested`)
+    console.log(`[Spotify API] Final result: ${allFeatures.length} features fetched`)
+    console.log(`[Spotify API] NOTE: Only fetching FIRST track for testing. Will expand to all tracks once confirmed working.`)
+
     return allFeatures
   }
 
