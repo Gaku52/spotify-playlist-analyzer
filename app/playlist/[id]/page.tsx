@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { createSpotifyClient } from "@/lib/spotify"
 import { PlaylistAnalyzer } from "@/components/playlist/playlist-analyzer"
-import { ValidPlaylistTrack } from "@/types"
+import { ValidPlaylistTrack, AudioFeatures } from "@/types"
 import { DebugLogger } from "@/components/debug/debug-logger"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -75,12 +75,28 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
         item.track !== null
     )
 
-    // NOTE: Audio features API is not available for apps created after Nov 27, 2024
-    // Using basic track information only
-    console.log(`[Playlist Page] Using ${validTracks.length} tracks (without audio features)`)
+    // Get audio features for all tracks (with proper rate limiting)
+    const trackIds = validTracks
+      .map((item) => item.track.id)
+      .filter((id): id is string => !!id)
 
-    // Use tracks without audio features
+    console.log(`[Playlist Page] Fetching audio features for ${trackIds.length} tracks`)
+
+    let audioFeatures: AudioFeatures[] = []
+    try {
+      audioFeatures = await spotify.getAudioFeatures(trackIds)
+      console.log(`[Playlist Page] Successfully fetched ${audioFeatures.length} audio features`)
+    } catch (error) {
+      console.error(`[Playlist Page] Failed to fetch audio features:`, error)
+      console.log(`[Playlist Page] Continuing without audio features`)
+    }
+
+    // Combine tracks with audio features
     const tracksWithFeatures = validTracks
+      .map((item) => {
+        const features = audioFeatures.find((f) => f?.id === item.track.id)
+        return features ? { ...item, audioFeatures: features } : item
+      })
 
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
