@@ -196,7 +196,7 @@ export function PlaylistAnalyzer({
             Reset all
           </button>
         </div>
-        <FilterPanel filters={filters} onChange={setFilters} />
+        <FilterPanel filters={filters} onChange={setFilters} hasAudioFeatures={stats.hasAudioFeatures} />
       </div>
 
       {/* Create Playlist Button */}
