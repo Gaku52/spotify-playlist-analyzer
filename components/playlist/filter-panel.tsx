@@ -19,6 +19,50 @@ export function FilterPanel({ filters, onChange, hasAudioFeatures = false }: Fil
           </p>
         </div>
       )}
+
+      {/* BPM (Tempo) Filter */}
+      <div className="space-y-3">
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          BPM (Tempo)
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="300"
+              placeholder="Min"
+              value={filters.bpmMin ?? ""}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  bpmMin: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              disabled={!hasAudioFeatures}
+              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+            />
+          </div>
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="300"
+              placeholder="Max"
+              value={filters.bpmMax ?? ""}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  bpmMax: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              disabled={!hasAudioFeatures}
+              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Popularity Filter */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
