@@ -59,6 +59,10 @@ export interface PlaylistTrack {
   track: SpotifyTrack | null
 }
 
+export interface ValidPlaylistTrack extends Omit<PlaylistTrack, "track"> {
+  track: SpotifyTrack
+}
+
 export interface FilterOptions {
   bpmMin?: number
   bpmMax?: number

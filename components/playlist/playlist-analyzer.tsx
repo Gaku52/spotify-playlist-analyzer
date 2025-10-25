@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { SpotifyPlaylist, PlaylistTrack, AudioFeatures, FilterOptions } from "@/types"
+import { SpotifyPlaylist, ValidPlaylistTrack, AudioFeatures, FilterOptions } from "@/types"
 import { FilterPanel } from "./filter-panel"
 import { TrackList } from "./track-list"
 import { StatsPanel } from "./stats-panel"
@@ -9,7 +9,7 @@ import { CreatePlaylistButton } from "./create-playlist-button"
 
 interface PlaylistAnalyzerProps {
   playlist: SpotifyPlaylist
-  tracks: Array<PlaylistTrack & { audioFeatures: AudioFeatures }>
+  tracks: Array<ValidPlaylistTrack & { audioFeatures: AudioFeatures }>
   accessToken: string
   userId: string
 }

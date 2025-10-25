@@ -1,7 +1,7 @@
-import { PlaylistTrack, AudioFeatures } from "@/types"
+import { ValidPlaylistTrack, AudioFeatures } from "@/types"
 
 interface TrackListProps {
-  tracks: Array<PlaylistTrack & { audioFeatures: AudioFeatures }>
+  tracks: Array<ValidPlaylistTrack & { audioFeatures: AudioFeatures }>
 }
 
 const KEYS = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"]

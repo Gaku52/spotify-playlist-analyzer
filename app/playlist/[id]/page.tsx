@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { createSpotifyClient } from "@/lib/spotify"
 import { PlaylistAnalyzer } from "@/components/playlist/playlist-analyzer"
+import { ValidPlaylistTrack } from "@/types"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -67,17 +68,23 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
       playlist.tracks.total = allTracks.length
     }
 
+    // Filter out tracks that are null (deleted tracks)
+    const validTracks = allTracks.filter(
+      (item): item is ValidPlaylistTrack =>
+        item.track !== null
+    )
+
     // Get audio features for all tracks
-    const trackIds = allTracks
-      .map((item) => item.track?.id)
+    const trackIds = validTracks
+      .map((item) => item.track.id)
       .filter((id): id is string => !!id)
 
     const audioFeatures = await spotify.getAudioFeatures(trackIds)
 
     // Combine tracks with audio features
-    const tracksWithFeatures = allTracks
+    const tracksWithFeatures = validTracks
       .map((item) => {
-        const features = audioFeatures.find((f) => f.id === item.track?.id)
+        const features = audioFeatures.find((f) => f.id === item.track.id)
         return features ? { ...item, audioFeatures: features } : null
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
