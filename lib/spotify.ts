@@ -221,19 +221,26 @@ export class SpotifyClient {
       const endpoint = `/audio-features?ids=${chunk.join(",")}`
       console.log(`[Spotify API] Batch ${i + 1}/${chunks.length}: Fetching ${chunk.length} tracks`)
       console.log(`[Spotify API] Endpoint: ${endpoint.substring(0, 150)}...`)
+      console.log(`[Spotify API] Full endpoint:`, endpoint)
 
       try {
         const response = await this.fetch<{
           audio_features: (AudioFeatures | null)[]
         }>(endpoint)
 
+        console.log(`[Spotify API] ===== RAW RESPONSE START =====`)
+        console.log(`[Spotify API] Batch ${i + 1} raw response:`, JSON.stringify(response, null, 2))
+        console.log(`[Spotify API] ===== RAW RESPONSE END =====`)
         console.log(`[Spotify API] Batch ${i + 1} raw response type:`, typeof response)
         console.log(`[Spotify API] Batch ${i + 1} response keys:`, Object.keys(response))
         console.log(`[Spotify API] Batch ${i + 1} audio_features type:`, typeof response.audio_features)
+        console.log(`[Spotify API] Batch ${i + 1} audio_features is array:`, Array.isArray(response.audio_features))
         console.log(`[Spotify API] Batch ${i + 1} audio_features length:`, response.audio_features?.length)
 
         if (response.audio_features && Array.isArray(response.audio_features)) {
           console.log(`[Spotify API] Batch ${i + 1} first item:`, JSON.stringify(response.audio_features[0]))
+          console.log(`[Spotify API] Batch ${i + 1} second item:`, JSON.stringify(response.audio_features[1]))
+          console.log(`[Spotify API] Batch ${i + 1} third item:`, JSON.stringify(response.audio_features[2]))
 
           const validFeatures = response.audio_features.filter(
             (f): f is AudioFeatures => f !== null

@@ -241,13 +241,18 @@ export function PlaylistAnalyzer({
           }
 
           const data = await response.json()
+          console.log(`[Client] ===== FULL API RESPONSE =====`)
           console.log(`[Client] Response data keys:`, Object.keys(data))
           console.log(`[Client] Response data.success:`, data.success)
           console.log(`[Client] Response data.audioFeatures type:`, typeof data.audioFeatures)
           console.log(`[Client] Response data.audioFeatures is array:`, Array.isArray(data.audioFeatures))
           console.log(`[Client] Response data.audioFeatures length:`, data.audioFeatures?.length)
           console.log(`[Client] First audio feature:`, data.audioFeatures?.[0])
-          console.log(`[Client] Full response:`, JSON.stringify(data).substring(0, 500))
+          console.log(`[Client] Second audio feature:`, data.audioFeatures?.[1])
+          console.log(`[Client] Third audio feature:`, data.audioFeatures?.[2])
+          console.log(`[Client] Debug info:`, data.debug)
+          console.log(`[Client] Full response (first 1000 chars):`, JSON.stringify(data).substring(0, 1000))
+          console.log(`[Client] ===== END RESPONSE =====`)
 
           if (data.audioFeatures && Array.isArray(data.audioFeatures)) {
             console.log(`[Client] Processing ${data.audioFeatures.length} audio features`)

@@ -33,14 +33,23 @@ export async function POST(request: Request) {
     console.log(`[Audio Features API] Fetching features for ${trackIds.length} tracks`)
     console.log(`[Audio Features API] Track IDs:`, trackIds)
 
+    // Get raw response from Spotify API for debugging
     const audioFeatures = await spotify.getAudioFeatures(trackIds)
 
     console.log(`[Audio Features API] Successfully fetched ${audioFeatures.length} features`)
     console.log(`[Audio Features API] Features data:`, JSON.stringify(audioFeatures.slice(0, 2)))
 
+    // Return both the processed data and debug info
     return NextResponse.json({
       success: true,
       audioFeatures,
+      debug: {
+        requestedTrackIds: trackIds,
+        requestedCount: trackIds.length,
+        returnedCount: audioFeatures.length,
+        firstThreeIds: trackIds.slice(0, 3),
+        sampleFeature: audioFeatures[0] || null,
+      }
     })
   } catch (error) {
     console.error("[Audio Features API] Error:", error)
