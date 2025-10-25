@@ -1,4 +1,5 @@
 import { PlaylistTrack, AudioFeatures } from "@/types"
+import Image from "next/image"
 
 interface TrackListProps {
   tracks: Array<PlaylistTrack & { audioFeatures: AudioFeatures }>
@@ -64,9 +65,11 @@ export function TrackList({ tracks }: TrackListProps) {
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   {item.track.album.images[0]?.url && (
-                    <img
+                    <Image
                       src={item.track.album.images[0].url}
                       alt={item.track.album.name}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded"
                     />
                   )}
