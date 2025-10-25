@@ -31,10 +31,12 @@ export async function POST(request: Request) {
     const spotify = createSpotifyClient(session.accessToken)
 
     console.log(`[Audio Features API] Fetching features for ${trackIds.length} tracks`)
+    console.log(`[Audio Features API] Track IDs:`, trackIds)
 
     const audioFeatures = await spotify.getAudioFeatures(trackIds)
 
     console.log(`[Audio Features API] Successfully fetched ${audioFeatures.length} features`)
+    console.log(`[Audio Features API] Features data:`, JSON.stringify(audioFeatures.slice(0, 2)))
 
     return NextResponse.json({
       success: true,

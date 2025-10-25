@@ -205,46 +205,32 @@ export class SpotifyClient {
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
-    // Spotify API limit: max 100 track IDs per request
-    // Using smaller chunks (50) with longer delays to avoid rate limiting
-    const chunks = []
-    const chunkSize = 50 // Reduced from 100 to be more conservative
-    for (let i = 0; i < trackIds.length; i += chunkSize) {
-      chunks.push(trackIds.slice(i, i + chunkSize))
-    }
-
+    // Use single track endpoint since batch endpoint returns empty results
     const allFeatures: AudioFeatures[] = []
 
-    console.log(`[Spotify API] Fetching audio features for ${trackIds.length} tracks in ${chunks.length} batches (${chunkSize} per batch)...`)
+    console.log(`[Spotify API] Fetching audio features for ${trackIds.length} tracks individually...`)
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]
-      console.log(`[Spotify API] Fetching batch ${i + 1}/${chunks.length} (${chunk.length} tracks)...`)
+    for (let i = 0; i < trackIds.length; i++) {
+      const trackId = trackIds[i]
+      console.log(`[Spotify API] Fetching track ${i + 1}/${trackIds.length}: ${trackId}`)
 
       try {
-        const response = await this.fetch<{
-          audio_features: (AudioFeatures | null)[]
-        }>(`/audio-features?ids=${chunk.join(",")}`)
+        const response = await this.fetch<AudioFeatures>(`/audio-features/${trackId}`)
 
-        const validFeatures = response.audio_features.filter(
-          (f): f is AudioFeatures => f !== null
-        )
-        allFeatures.push(...validFeatures)
-
-        console.log(`[Spotify API] Batch ${i + 1}/${chunks.length} complete: ${validFeatures.length} features fetched`)
-
-        // Add delay between batches to avoid rate limiting
-        if (i < chunks.length - 1) {
-          const delayMs = 1000 // Increased from 400ms to 1000ms
-          console.log(`[Spotify API] Waiting ${delayMs}ms before next batch...`)
-          await delay(delayMs)
+        if (response && response.id) {
+          allFeatures.push(response)
+          console.log(`[Spotify API] Track ${i + 1}/${trackIds.length} success: tempo=${response.tempo}, energy=${response.energy}`)
         }
       } catch (error) {
-        console.error(`[Spotify API] Error fetching batch ${i + 1}/${chunks.length}:`, error)
-        // Continue with next batch even if this one fails
-        if (i < chunks.length - 1) {
-          await delay(2000) // Wait longer after an error
-        }
+        console.error(`[Spotify API] Error fetching track ${i + 1}/${trackIds.length} (${trackId}):`, error)
+        // Continue with next track even if this one fails
+      }
+
+      // Add delay between requests to avoid rate limiting (every 10 tracks)
+      if ((i + 1) % 10 === 0 && i < trackIds.length - 1) {
+        const delayMs = 500
+        console.log(`[Spotify API] Waiting ${delayMs}ms after ${i + 1} tracks...`)
+        await delay(delayMs)
       }
     }
 
