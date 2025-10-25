@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { createSpotifyClient } from "@/lib/spotify"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { PlaylistGrid } from "@/components/dashboard/playlist-grid"
+import { DebugLogger } from "@/components/debug/debug-logger"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
 
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <DebugLogger />
         {/* Header */}
         <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
