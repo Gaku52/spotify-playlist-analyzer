@@ -18,10 +18,38 @@ export default async function DashboardPage() {
   const spotify = createSpotifyClient(session.accessToken!)
 
   try {
-    const [user, playlists] = await Promise.all([
+    const [user, playlists, savedTracks] = await Promise.all([
       spotify.getCurrentUser(),
       spotify.getUserPlaylists(50, 0),
+      spotify.getSavedTracks(1, 0), // Get just the total count
     ])
+
+    // Create a pseudo-playlist for Liked Songs
+    const likedSongsPlaylist = {
+      id: "liked",
+      name: "Liked Songs",
+      description: "Your favorite tracks",
+      images: [
+        {
+          url: "https://misc.scdn.co/liked-songs/liked-songs-640.png",
+          height: 640,
+          width: 640,
+        },
+      ],
+      tracks: {
+        total: savedTracks.total,
+        href: "",
+      },
+      owner: {
+        display_name: user.display_name,
+        id: user.id,
+      },
+      public: false,
+      collaborative: false,
+    }
+
+    // Combine Liked Songs with user playlists
+    const allPlaylists = [likedSongsPlaylist, ...playlists.items]
 
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -44,7 +72,7 @@ export default async function DashboardPage() {
                     {user.display_name}
                   </h1>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    {playlists.total} playlists
+                    {savedTracks.total} liked songs • {playlists.total} playlists
                   </p>
                 </div>
               </div>
@@ -57,14 +85,14 @@ export default async function DashboardPage() {
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-              Your Playlists
+              Your Music
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400">
-              Select a playlist to analyze and filter tracks
+              Select a playlist or your liked songs to analyze and filter tracks
             </p>
           </div>
 
-          <PlaylistGrid playlists={playlists.items} />
+          <PlaylistGrid playlists={allPlaylists} />
         </main>
       </div>
     )

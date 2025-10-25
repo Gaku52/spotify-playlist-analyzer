@@ -90,6 +90,38 @@ export class SpotifyClient {
     return allTracks
   }
 
+  async getSavedTracks(limit = 50, offset = 0) {
+    return this.fetch<{
+      items: Array<{ added_at: string; track: PlaylistTrack["track"] }>
+      total: number
+      limit: number
+      offset: number
+    }>(`/me/tracks?limit=${limit}&offset=${offset}`)
+  }
+
+  async getAllSavedTracks(): Promise<PlaylistTrack[]> {
+    const allTracks: PlaylistTrack[] = []
+    let offset = 0
+    const limit = 50
+
+    while (true) {
+      const response = await this.getSavedTracks(limit, offset)
+      const formattedTracks = response.items.map((item) => ({
+        added_at: item.added_at,
+        track: item.track,
+      }))
+      allTracks.push(...formattedTracks)
+
+      if (response.items.length < limit) {
+        break
+      }
+
+      offset += limit
+    }
+
+    return allTracks
+  }
+
   async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
     // Spotify API限制：最大100個のトラックID
     const chunks = []

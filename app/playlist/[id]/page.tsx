@@ -24,10 +24,43 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
   const spotify = createSpotifyClient(session.accessToken!)
 
   try {
-    const [playlist, allTracks] = await Promise.all([
-      spotify.getPlaylist(id),
-      spotify.getAllPlaylistTracks(id),
-    ])
+    // Check if this is the "Liked Songs" playlist
+    const isLikedSongs = id === "liked"
+
+    // Fetch playlist info and tracks
+    const [playlist, allTracks] = isLikedSongs
+      ? await Promise.all([
+          // For Liked Songs, create a pseudo-playlist object
+          Promise.resolve({
+            id: "liked",
+            name: "Liked Songs",
+            description: "Your favorite tracks",
+            images: [
+              {
+                url: "https://misc.scdn.co/liked-songs/liked-songs-640.png",
+                height: 640,
+                width: 640,
+              },
+            ],
+            tracks: { total: 0, href: "" },
+            owner: {
+              display_name: session.user.name || "You",
+              id: session.user.id,
+            },
+            public: false,
+            collaborative: false,
+          }),
+          spotify.getAllSavedTracks(),
+        ])
+      : await Promise.all([
+          spotify.getPlaylist(id),
+          spotify.getAllPlaylistTracks(id),
+        ])
+
+    // Update total for Liked Songs
+    if (isLikedSongs) {
+      playlist.tracks.total = allTracks.length
+    }
 
     // Get audio features for all tracks
     const trackIds = allTracks
