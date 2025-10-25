@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { SpotifyPlaylist, ValidPlaylistTrack, AudioFeatures, FilterOptions } from "@/types"
 import { FilterPanel } from "./filter-panel"
 import { TrackList } from "./track-list"
@@ -20,12 +20,9 @@ export function PlaylistAnalyzer({
   userId,
   accessToken
 }: PlaylistAnalyzerProps) {
-  const [tracks, setTracks] = useState(initialTracks)
+  const [tracks] = useState(initialTracks)
   const [filters, setFilters] = useState<FilterOptions>({})
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
-  const [isLoadingFeatures, setIsLoadingFeatures] = useState(false)
-  const [loadingProgress, setLoadingProgress] = useState(0)
-  const [loadingError, setLoadingError] = useState<string | null>(null)
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [playbackError, setPlaybackError] = useState<string | null>(null)
 
@@ -203,131 +200,8 @@ export function PlaylistAnalyzer({
     }
   }
 
-  // Analyze BPM from preview URLs on client side
-  useEffect(() => {
-    const analyzeBPM = async () => {
-      // Dynamic import to avoid SSR issues
-      const { analyzeBPMBatch } = await import('@/lib/bpm-analyzer')
-
-      // Get all tracks that don't have audio features yet
-      const tracksWithoutFeatures = initialTracks.filter(
-        (track) => !track.audioFeatures && track.track.id
-      )
-
-      if (tracksWithoutFeatures.length === 0) {
-        return // All tracks already have features
-      }
-
-      console.log(`[Client] Analyzing BPM for ${tracksWithoutFeatures.length} tracks using preview URLs...`)
-      setIsLoadingFeatures(true)
-      setLoadingProgress(0)
-
-      // Prepare track list with preview URLs
-      const tracksToAnalyze = tracksWithoutFeatures
-        .filter((track) => track.track.preview_url)
-        .map((track) => ({
-          id: track.track.id,
-          previewUrl: track.track.preview_url,
-        }))
-
-      const tracksWithoutPreview = tracksWithoutFeatures.length - tracksToAnalyze.length
-
-      console.log(`[Client] ${tracksToAnalyze.length} tracks have preview URLs`)
-      console.log(`[Client] ${tracksWithoutPreview} tracks do not have preview URLs`)
-
-      if (tracksToAnalyze.length === 0) {
-        setLoadingError('No preview URLs available for BPM analysis')
-        setIsLoadingFeatures(false)
-        return
-      }
-
-      try {
-        // Analyze BPM for all tracks
-        const results = await analyzeBPMBatch(tracksToAnalyze, (current, total) => {
-          setLoadingProgress(Math.round((current / total) * 100))
-        })
-
-        console.log(`[Client] BPM analysis complete: ${results.size} results`)
-
-        // Update tracks with BPM data
-        setTracks((prevTracks) =>
-          prevTracks.map((track) => {
-            const result = results.get(track.track.id)
-            if (result && result.success) {
-              return {
-                ...track,
-                audioFeatures: {
-                  id: track.track.id,
-                  tempo: result.tempo,
-                  // Other fields not available from preview URL analysis
-                  key: -1,
-                  mode: -1,
-                  time_signature: 4,
-                  acousticness: 0,
-                  danceability: 0,
-                  energy: 0,
-                  instrumentalness: 0,
-                  liveness: 0,
-                  loudness: 0,
-                  speechiness: 0,
-                  valence: 0,
-                },
-              }
-            }
-            return track
-          })
-        )
-
-        console.log(`[Client] Updated tracks with BPM data`)
-      } catch (error) {
-        console.error(`[Client] Error analyzing BPM:`, error)
-        setLoadingError(`Error: ${error instanceof Error ? error.message : String(error)}`)
-      }
-
-      setIsLoadingFeatures(false)
-    }
-
-    analyzeBPM()
-  }, [initialTracks])
-
   return (
     <div className="space-y-6 pb-32">
-      {/* Loading Progress */}
-      {isLoadingFeatures && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Analyzing BPM from audio previews...
-            </span>
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              {loadingProgress}%
-            </span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
-            <div
-              className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-blue-800 dark:text-blue-200">
-            Using 30-second previews for BPM detection. Tracks without preview URLs will be skipped.
-          </p>
-        </div>
-      )}
-
-      {/* Loading Error */}
-      {loadingError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <div className="flex items-start gap-2">
-            <span className="text-sm font-semibold text-red-900 dark:text-red-100">Error:</span>
-            <span className="text-sm text-red-800 dark:text-red-200">{loadingError}</span>
-          </div>
-          <div className="mt-2 text-xs text-red-700 dark:text-red-300">
-            Check browser console (F12) for more details
-          </div>
-        </div>
-      )}
-
       {/* Spotify Player */}
       <SpotifyPlayer
         accessToken={accessToken}
