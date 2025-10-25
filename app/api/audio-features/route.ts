@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth"
-import { createSpotifyClient } from "@/lib/spotify"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
@@ -28,29 +27,64 @@ export async function POST(request: Request) {
       )
     }
 
-    const spotify = createSpotifyClient(session.accessToken)
-
     console.log(`[Audio Features API] Fetching features for ${trackIds.length} tracks`)
     console.log(`[Audio Features API] Track IDs:`, trackIds)
 
-    // Get raw response from Spotify API for debugging
-    const audioFeatures = await spotify.getAudioFeatures(trackIds)
+    // Directly call Spotify API and capture raw response
+    try {
+      // Test single track endpoint
+      const testTrackId = trackIds[0]
+      const endpoint = `/audio-features/${testTrackId}`
 
-    console.log(`[Audio Features API] Successfully fetched ${audioFeatures.length} features`)
-    console.log(`[Audio Features API] Features data:`, JSON.stringify(audioFeatures.slice(0, 2)))
+      console.log(`[Audio Features API] Testing endpoint: ${endpoint}`)
 
-    // Return both the processed data and debug info
-    return NextResponse.json({
-      success: true,
-      audioFeatures,
-      debug: {
-        requestedTrackIds: trackIds,
-        requestedCount: trackIds.length,
-        returnedCount: audioFeatures.length,
-        firstThreeIds: trackIds.slice(0, 3),
-        sampleFeature: audioFeatures[0] || null,
+      // Make direct fetch to Spotify API
+      const spotifyResponse = await fetch(`https://api.spotify.com/v1${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      console.log(`[Audio Features API] Spotify response status: ${spotifyResponse.status}`)
+
+      const rawText = await spotifyResponse.text()
+      console.log(`[Audio Features API] Raw response text:`, rawText)
+
+      let rawData
+      try {
+        rawData = JSON.parse(rawText)
+      } catch {
+        rawData = { error: 'Failed to parse JSON', rawText }
       }
-    })
+
+      console.log(`[Audio Features API] Parsed response:`, JSON.stringify(rawData, null, 2))
+
+      // Return raw response to client for debugging
+      return NextResponse.json({
+        success: spotifyResponse.ok,
+        audioFeatures: spotifyResponse.ok && rawData.id ? [rawData] : [],
+        debug: {
+          requestedTrackIds: trackIds,
+          requestedCount: trackIds.length,
+          firstTrackId: testTrackId,
+          spotifyStatusCode: spotifyResponse.status,
+          spotifyStatusText: spotifyResponse.statusText,
+          rawResponse: rawData,
+          endpoint: endpoint,
+        }
+      })
+    } catch (fetchError) {
+      console.error(`[Audio Features API] Fetch error:`, fetchError)
+      return NextResponse.json({
+        success: false,
+        audioFeatures: [],
+        debug: {
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          errorType: fetchError instanceof Error ? fetchError.constructor.name : typeof fetchError,
+        }
+      })
+    }
   } catch (error) {
     console.error("[Audio Features API] Error:", error)
     return NextResponse.json(
