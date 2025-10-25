@@ -1,7 +1,7 @@
 import { ValidPlaylistTrack, AudioFeatures } from "@/types"
 
 interface TrackListProps {
-  tracks: Array<ValidPlaylistTrack & { audioFeatures: AudioFeatures }>
+  tracks: Array<ValidPlaylistTrack & { audioFeatures?: AudioFeatures }>
 }
 
 const KEYS = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"]
@@ -21,6 +21,9 @@ export function TrackList({ tracks }: TrackListProps) {
     )
   }
 
+  // Check if any track has audio features
+  const hasAudioFeatures = tracks.some(track => track.audioFeatures !== undefined)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -35,18 +38,26 @@ export function TrackList({ tracks }: TrackListProps) {
             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Artist
             </th>
-            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              BPM
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Key
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Energy
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Dance
-            </th>
+            {hasAudioFeatures ? (
+              <>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  BPM
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Key
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Energy
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Dance
+                </th>
+              </>
+            ) : (
+              <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Popularity
+              </th>
+            )}
             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Duration
             </th>
@@ -83,18 +94,26 @@ export function TrackList({ tracks }: TrackListProps) {
               <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
                 {item.track.artists.map((artist) => artist.name).join(", ")}
               </td>
-              <td className="px-4 py-3 text-center text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                {Math.round(item.audioFeatures.tempo)}
-              </td>
-              <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
-                {KEYS[item.audioFeatures.key] || "?"}
-              </td>
-              <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
-                {(item.audioFeatures.energy * 100).toFixed(0)}%
-              </td>
-              <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
-                {(item.audioFeatures.danceability * 100).toFixed(0)}%
-              </td>
+              {hasAudioFeatures && item.audioFeatures ? (
+                <>
+                  <td className="px-4 py-3 text-center text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                    {Math.round(item.audioFeatures.tempo)}
+                  </td>
+                  <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
+                    {KEYS[item.audioFeatures.key] || "?"}
+                  </td>
+                  <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
+                    {(item.audioFeatures.energy * 100).toFixed(0)}%
+                  </td>
+                  <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
+                    {(item.audioFeatures.danceability * 100).toFixed(0)}%
+                  </td>
+                </>
+              ) : (
+                <td className="px-4 py-3 text-center text-sm text-zinc-700 dark:text-zinc-300">
+                  {item.track.popularity}
+                </td>
+              )}
               <td className="px-4 py-3 text-right text-sm text-zinc-500 dark:text-zinc-400">
                 {formatDuration(item.track.duration_ms)}
               </td>

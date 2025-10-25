@@ -9,7 +9,7 @@ import { CreatePlaylistButton } from "./create-playlist-button"
 
 interface PlaylistAnalyzerProps {
   playlist: SpotifyPlaylist
-  tracks: Array<ValidPlaylistTrack & { audioFeatures: AudioFeatures }>
+  tracks: Array<ValidPlaylistTrack & { audioFeatures?: AudioFeatures }>
   accessToken: string
   userId: string
 }
@@ -25,41 +25,70 @@ export function PlaylistAnalyzer({
   const filteredTracks = useMemo(() => {
     return tracks.filter((item) => {
       const features = item.audioFeatures
+      const track = item.track
 
-      // BPM filter
-      if (filters.bpmMin !== undefined && features.tempo < filters.bpmMin) {
+      // Audio features filters (only if audioFeatures is available)
+      if (features) {
+        // BPM filter
+        if (filters.bpmMin !== undefined && features.tempo < filters.bpmMin) {
+          return false
+        }
+        if (filters.bpmMax !== undefined && features.tempo > filters.bpmMax) {
+          return false
+        }
+
+        // Key filter
+        if (filters.key !== undefined && features.key !== filters.key) {
+          return false
+        }
+
+        // Energy filter
+        if (filters.energyMin !== undefined && features.energy < filters.energyMin) {
+          return false
+        }
+        if (filters.energyMax !== undefined && features.energy > filters.energyMax) {
+          return false
+        }
+
+        // Danceability filter
+        if (filters.danceabilityMin !== undefined && features.danceability < filters.danceabilityMin) {
+          return false
+        }
+        if (filters.danceabilityMax !== undefined && features.danceability > filters.danceabilityMax) {
+          return false
+        }
+
+        // Valence filter
+        if (filters.valenceMin !== undefined && features.valence < filters.valenceMin) {
+          return false
+        }
+        if (filters.valenceMax !== undefined && features.valence > filters.valenceMax) {
+          return false
+        }
+      }
+
+      // Basic filters (always available)
+      // Popularity filter
+      if (filters.popularityMin !== undefined && track.popularity < filters.popularityMin) {
         return false
       }
-      if (filters.bpmMax !== undefined && features.tempo > filters.bpmMax) {
+      if (filters.popularityMax !== undefined && track.popularity > filters.popularityMax) {
         return false
       }
 
-      // Key filter
-      if (filters.key !== undefined && features.key !== filters.key) {
+      // Duration filter
+      if (filters.durationMinMs !== undefined && track.duration_ms < filters.durationMinMs) {
+        return false
+      }
+      if (filters.durationMaxMs !== undefined && track.duration_ms > filters.durationMaxMs) {
         return false
       }
 
-      // Energy filter
-      if (filters.energyMin !== undefined && features.energy < filters.energyMin) {
+      // Explicit filter
+      if (filters.explicitOnly && !track.explicit) {
         return false
       }
-      if (filters.energyMax !== undefined && features.energy > filters.energyMax) {
-        return false
-      }
-
-      // Danceability filter
-      if (filters.danceabilityMin !== undefined && features.danceability < filters.danceabilityMin) {
-        return false
-      }
-      if (filters.danceabilityMax !== undefined && features.danceability > filters.danceabilityMax) {
-        return false
-      }
-
-      // Valence filter
-      if (filters.valenceMin !== undefined && features.valence < filters.valenceMin) {
-        return false
-      }
-      if (filters.valenceMax !== undefined && features.valence > filters.valenceMax) {
+      if (filters.nonExplicitOnly && track.explicit) {
         return false
       }
 
@@ -77,27 +106,37 @@ export function PlaylistAnalyzer({
         avgDanceability: 0,
         avgValence: 0,
         totalDuration: 0,
+        avgPopularity: 0,
+        hasAudioFeatures: false,
       }
     }
 
+    // Check if any track has audio features
+    const hasAudioFeatures = filteredTracks.some(item => item.audioFeatures !== undefined)
+
     const sum = filteredTracks.reduce(
       (acc, item) => ({
-        tempo: acc.tempo + item.audioFeatures.tempo,
-        energy: acc.energy + item.audioFeatures.energy,
-        danceability: acc.danceability + item.audioFeatures.danceability,
-        valence: acc.valence + item.audioFeatures.valence,
+        tempo: acc.tempo + (item.audioFeatures?.tempo || 0),
+        energy: acc.energy + (item.audioFeatures?.energy || 0),
+        danceability: acc.danceability + (item.audioFeatures?.danceability || 0),
+        valence: acc.valence + (item.audioFeatures?.valence || 0),
         duration: acc.duration + item.track.duration_ms,
+        popularity: acc.popularity + item.track.popularity,
       }),
-      { tempo: 0, energy: 0, danceability: 0, valence: 0, duration: 0 }
+      { tempo: 0, energy: 0, danceability: 0, valence: 0, duration: 0, popularity: 0 }
     )
+
+    const tracksWithFeatures = filteredTracks.filter(item => item.audioFeatures !== undefined).length
 
     return {
       count: filteredTracks.length,
-      avgTempo: sum.tempo / filteredTracks.length,
-      avgEnergy: sum.energy / filteredTracks.length,
-      avgDanceability: sum.danceability / filteredTracks.length,
-      avgValence: sum.valence / filteredTracks.length,
+      avgTempo: tracksWithFeatures > 0 ? sum.tempo / tracksWithFeatures : 0,
+      avgEnergy: tracksWithFeatures > 0 ? sum.energy / tracksWithFeatures : 0,
+      avgDanceability: tracksWithFeatures > 0 ? sum.danceability / tracksWithFeatures : 0,
+      avgValence: tracksWithFeatures > 0 ? sum.valence / tracksWithFeatures : 0,
       totalDuration: sum.duration,
+      avgPopularity: sum.popularity / filteredTracks.length,
+      hasAudioFeatures,
     }
   }, [filteredTracks])
 

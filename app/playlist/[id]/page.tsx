@@ -75,24 +75,12 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
         item.track !== null
     )
 
-    // Get audio features for all tracks
-    const trackIds = validTracks
-      .map((item) => item.track.id)
-      .filter((id): id is string => !!id)
+    // NOTE: Audio features API is not available for apps created after Nov 27, 2024
+    // Using basic track information only
+    console.log(`[Playlist Page] Using ${validTracks.length} tracks (without audio features)`)
 
-    console.log(`[Playlist Page] Fetching audio features for ${trackIds.length} tracks`)
-    console.log(`[Playlist Page] First 5 track IDs:`, trackIds.slice(0, 5))
-
-    const audioFeatures = await spotify.getAudioFeatures(trackIds)
-    console.log(`[Playlist Page] Successfully fetched ${audioFeatures.length} audio features`)
-
-    // Combine tracks with audio features
+    // Use tracks without audio features
     const tracksWithFeatures = validTracks
-      .map((item) => {
-        const features = audioFeatures.find((f) => f.id === item.track.id)
-        return features ? { ...item, audioFeatures: features } : null
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
 
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">

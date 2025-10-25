@@ -79,9 +79,14 @@ export class SpotifyClient {
       } catch (error) {
         if (attempt === retries - 1) {
           console.error(`[Spotify API] Max retries reached for ${fullUrl}`)
-          throw error
+          console.error(`[Spotify API] Last error:`, error)
+          const detailedError = new Error(
+            `Max retries reached for ${fullUrl}\nOriginal error: ${error instanceof Error ? error.message : String(error)}`
+          )
+          detailedError.cause = error
+          throw detailedError
         }
-        console.log(`[Spotify API] Retry ${attempt + 1}/${retries - 1} after error`)
+        console.log(`[Spotify API] Retry ${attempt + 1}/${retries - 1} after error:`, error)
         // Wait before retrying
         await delay((attempt + 1) * 1000)
       }
@@ -167,29 +172,36 @@ export class SpotifyClient {
     let offset = 0
     const limit = 50
 
-    console.log("Fetching saved tracks...")
+    console.log("[Spotify API] Fetching saved tracks...")
 
-    while (true) {
-      const response = await this.getSavedTracks(limit, offset)
-      const formattedTracks = response.items.map((item) => ({
-        added_at: item.added_at,
-        track: item.track,
-      }))
-      allTracks.push(...formattedTracks)
+    try {
+      while (true) {
+        console.log(`[Spotify API] Fetching saved tracks batch: offset=${offset}, limit=${limit}`)
+        const response = await this.getSavedTracks(limit, offset)
+        const formattedTracks = response.items.map((item) => ({
+          added_at: item.added_at,
+          track: item.track,
+        }))
+        allTracks.push(...formattedTracks)
 
-      console.log(`Fetched ${allTracks.length}/${response.total} saved tracks...`)
+        console.log(`[Spotify API] Fetched ${allTracks.length}/${response.total} saved tracks...`)
 
-      if (response.items.length < limit) {
-        break
+        if (response.items.length < limit) {
+          console.log("[Spotify API] Reached end of saved tracks")
+          break
+        }
+
+        offset += limit
+        // Add small delay between pagination requests
+        await delay(200)
       }
 
-      offset += limit
-      // Add small delay between pagination requests
-      await delay(200)
+      console.log(`[Spotify API] Successfully fetched all ${allTracks.length} saved tracks`)
+      return allTracks
+    } catch (error) {
+      console.error(`[Spotify API] Error in getAllSavedTracks at offset ${offset}:`, error)
+      throw error
     }
-
-    console.log(`Successfully fetched all ${allTracks.length} saved tracks`)
-    return allTracks
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {

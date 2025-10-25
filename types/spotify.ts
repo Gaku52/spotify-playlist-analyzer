@@ -32,10 +32,13 @@ export interface SpotifyTrack {
     id: string
     name: string
     images: SpotifyImage[]
+    release_date?: string
   }
   duration_ms: number
   uri: string
   preview_url: string | null
+  popularity: number
+  explicit: boolean
 }
 
 export interface AudioFeatures {
@@ -64,6 +67,7 @@ export interface ValidPlaylistTrack extends Omit<PlaylistTrack, "track"> {
 }
 
 export interface FilterOptions {
+  // Audio features filters (deprecated - only for apps with extended access)
   bpmMin?: number
   bpmMax?: number
   key?: number
@@ -73,4 +77,12 @@ export interface FilterOptions {
   danceabilityMax?: number
   valenceMin?: number
   valenceMax?: number
+
+  // Basic filters (available for all apps)
+  popularityMin?: number
+  popularityMax?: number
+  durationMinMs?: number
+  durationMaxMs?: number
+  explicitOnly?: boolean
+  nonExplicitOnly?: boolean
 }
