@@ -21,7 +21,12 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
     redirect("/")
   }
 
-  const spotify = createSpotifyClient(session.accessToken!)
+  if (!session.accessToken) {
+    console.error("Access token is missing from session")
+    redirect("/")
+  }
+
+  const spotify = createSpotifyClient(session.accessToken)
 
   try {
     // Check if this is the "Liked Songs" playlist

@@ -21,6 +21,9 @@ export class SpotifyClient {
     options?: RequestInit,
     retries = 3
   ): Promise<T> {
+    console.log(`Spotify API Request: ${endpoint}`)
+    console.log(`Access Token: ${this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'MISSING'}`)
+
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {

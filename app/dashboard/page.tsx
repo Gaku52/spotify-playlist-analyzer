@@ -15,7 +15,12 @@ export default async function DashboardPage() {
     redirect("/")
   }
 
-  const spotify = createSpotifyClient(session.accessToken!)
+  if (!session.accessToken) {
+    console.error("Access token is missing from session")
+    redirect("/")
+  }
+
+  const spotify = createSpotifyClient(session.accessToken)
 
   try {
     const [user, playlists, savedTracks] = await Promise.all([
