@@ -23,6 +23,7 @@ export function PlaylistAnalyzer({
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
   const [isLoadingFeatures, setIsLoadingFeatures] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
+  const [loadingError, setLoadingError] = useState<string | null>(null)
 
   // Filter tracks based on current filters
   const filteredTracks = useMemo(() => {
@@ -227,7 +228,9 @@ export function PlaylistAnalyzer({
           })
 
           if (!response.ok) {
-            console.error(`[Client] Batch ${i + 1} failed: ${response.status}`)
+            const errorText = await response.text()
+            console.error(`[Client] Batch ${i + 1} failed: ${response.status} - ${errorText}`)
+            setLoadingError(`Failed to fetch audio features: ${response.status} ${errorText}`)
             continue
           }
 
@@ -246,9 +249,13 @@ export function PlaylistAnalyzer({
             )
 
             console.log(`[Client] Batch ${i + 1}/${batches.length} complete. Total features: ${allFeatures.length}`)
+          } else {
+            console.error(`[Client] Batch ${i + 1} returned no audio features`)
+            setLoadingError(`No audio features returned from API`)
           }
         } catch (error) {
           console.error(`[Client] Error fetching batch ${i + 1}:`, error)
+          setLoadingError(`Error: ${error instanceof Error ? error.message : String(error)}`)
         }
 
         // Update progress
@@ -285,6 +292,19 @@ export function PlaylistAnalyzer({
               className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
               style={{ width: `${loadingProgress}%` }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Loading Error */}
+      {loadingError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+          <div className="flex items-start gap-2">
+            <span className="text-sm font-semibold text-red-900 dark:text-red-100">Error:</span>
+            <span className="text-sm text-red-800 dark:text-red-200">{loadingError}</span>
+          </div>
+          <div className="mt-2 text-xs text-red-700 dark:text-red-300">
+            Check browser console (F12) for more details
           </div>
         </div>
       )}
