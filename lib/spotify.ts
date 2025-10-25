@@ -43,6 +43,11 @@ export class SpotifyClient {
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({}))
+          console.error(`Spotify API Error:`, {
+            status: response.status,
+            endpoint,
+            error,
+          })
           throw new Error(
             error.error?.message ||
             `Spotify API request failed with status ${response.status}`
