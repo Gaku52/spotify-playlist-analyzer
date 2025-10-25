@@ -101,7 +101,7 @@ export class SpotifyClient {
       limit: number
       offset: number
     }>(
-      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}&fields=items(added_at,track(id,name,artists,album,duration_ms,uri,preview_url)),total,limit,offset`
+      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`
     )
   }
 
