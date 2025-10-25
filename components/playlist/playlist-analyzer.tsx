@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { SpotifyPlaylist, ValidPlaylistTrack, AudioFeatures, FilterOptions } from "@/types"
 import { FilterPanel } from "./filter-panel"
 import { TrackList } from "./track-list"
@@ -15,11 +15,14 @@ interface PlaylistAnalyzerProps {
 }
 
 export function PlaylistAnalyzer({
-  tracks,
+  tracks: initialTracks,
   userId
 }: PlaylistAnalyzerProps) {
+  const [tracks, setTracks] = useState(initialTracks)
   const [filters, setFilters] = useState<FilterOptions>({})
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
+  const [isLoadingFeatures, setIsLoadingFeatures] = useState(false)
+  const [loadingProgress, setLoadingProgress] = useState(0)
 
   // Filter tracks based on current filters
   const filteredTracks = useMemo(() => {
@@ -178,8 +181,113 @@ export function PlaylistAnalyzer({
     }
   }
 
+  // Fetch audio features incrementally on client side
+  useEffect(() => {
+    const fetchAudioFeatures = async () => {
+      // Get all track IDs that don't have audio features yet
+      const tracksWithoutFeatures = initialTracks.filter(
+        (track) => !track.audioFeatures && track.track.id
+      )
+
+      if (tracksWithoutFeatures.length === 0) {
+        return // All tracks already have features
+      }
+
+      const trackIds = tracksWithoutFeatures
+        .map((track) => track.track.id)
+        .filter((id): id is string => !!id)
+
+      console.log(`[Client] Fetching audio features for ${trackIds.length} tracks...`)
+      setIsLoadingFeatures(true)
+      setLoadingProgress(0)
+
+      // Split into batches of 50
+      const batchSize = 50
+      const batches = []
+      for (let i = 0; i < trackIds.length; i += batchSize) {
+        batches.push(trackIds.slice(i, i + batchSize))
+      }
+
+      console.log(`[Client] Processing ${batches.length} batches...`)
+
+      // Fetch features batch by batch
+      const allFeatures: AudioFeatures[] = []
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i]
+        console.log(`[Client] Fetching batch ${i + 1}/${batches.length} (${batch.length} tracks)...`)
+
+        try {
+          const response = await fetch("/api/audio-features", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ trackIds: batch }),
+          })
+
+          if (!response.ok) {
+            console.error(`[Client] Batch ${i + 1} failed: ${response.status}`)
+            continue
+          }
+
+          const data = await response.json()
+          if (data.audioFeatures) {
+            allFeatures.push(...data.audioFeatures)
+
+            // Update tracks with fetched features
+            setTracks((prevTracks) =>
+              prevTracks.map((track) => {
+                const feature = data.audioFeatures.find(
+                  (f: AudioFeatures) => f.id === track.track.id
+                )
+                return feature ? { ...track, audioFeatures: feature } : track
+              })
+            )
+
+            console.log(`[Client] Batch ${i + 1}/${batches.length} complete. Total features: ${allFeatures.length}`)
+          }
+        } catch (error) {
+          console.error(`[Client] Error fetching batch ${i + 1}:`, error)
+        }
+
+        // Update progress
+        setLoadingProgress(Math.round(((i + 1) / batches.length) * 100))
+
+        // Add delay between batches to avoid rate limiting
+        if (i < batches.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      }
+
+      setIsLoadingFeatures(false)
+      console.log(`[Client] Finished fetching audio features. Total: ${allFeatures.length}`)
+    }
+
+    fetchAudioFeatures()
+  }, [initialTracks])
+
   return (
     <div className="space-y-6">
+      {/* Loading Progress */}
+      {isLoadingFeatures && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Loading audio features (BPM, Key, Energy)...
+            </span>
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              {loadingProgress}%
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
+            <div
+              className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
+              style={{ width: `${loadingProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
       {/* Stats Panel */}
       <StatsPanel stats={stats} totalTracks={tracks.length} />
 

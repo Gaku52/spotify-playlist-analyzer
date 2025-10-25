@@ -12,10 +12,10 @@ export function FilterPanel({ filters, onChange, hasAudioFeatures = false }: Fil
   return (
     <div className="space-y-6">
       {!hasAudioFeatures && (
-        <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Note:</strong> Audio features (BPM, Key, Energy) are not available for this app.
-            You can filter by popularity and duration instead.
+        <div className="rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            <strong>Note:</strong> Audio features (BPM, Key, Energy) could not be loaded for this playlist.
+            This may be due to playlist size or API rate limits. You can still filter by popularity and duration.
           </p>
         </div>
       )}
