@@ -80,7 +80,11 @@ export default async function PlaylistPage({ params }: PlaylistPageProps) {
       .map((item) => item.track.id)
       .filter((id): id is string => !!id)
 
+    console.log(`[Playlist Page] Fetching audio features for ${trackIds.length} tracks`)
+    console.log(`[Playlist Page] First 5 track IDs:`, trackIds.slice(0, 5))
+
     const audioFeatures = await spotify.getAudioFeatures(trackIds)
+    console.log(`[Playlist Page] Successfully fetched ${audioFeatures.length} audio features`)
 
     // Combine tracks with audio features
     const tracksWithFeatures = validTracks

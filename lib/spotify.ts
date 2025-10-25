@@ -56,7 +56,7 @@ export class SpotifyClient {
             error = { message: errorText }
           }
 
-          console.error(`[Spotify API] Error Details:`, {
+          const errorDetails = {
             status: response.status,
             statusText: response.statusText,
             url: fullUrl,
@@ -64,13 +64,15 @@ export class SpotifyClient {
             error,
             attempt: attempt + 1,
             maxRetries: retries,
-          })
+          }
 
-          throw new Error(
-            error.error?.message ||
-            error.message ||
-            `Spotify API request failed with status ${response.status}`
-          )
+          console.error(`[Spotify API] Error Details:`, errorDetails)
+
+          // Create detailed error message
+          const spotifyErrorMessage = error.error?.message || error.message || 'Unknown error'
+          const errorMessage = `Spotify API Error [${response.status}]: ${spotifyErrorMessage}\nEndpoint: ${fullUrl}\nDetails: ${JSON.stringify(error, null, 2)}`
+
+          throw new Error(errorMessage)
         }
 
         return response.json()
